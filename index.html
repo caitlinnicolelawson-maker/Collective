@@ -1390,10 +1390,8 @@ function renderDashFriendsWishlists() {
   var el = document.getElementById('dash-friends-wishlists');
   if (!el) return;
   // Demo friends only for dashboard (real friend wishlists loaded async in viewFriend)
-  var allFriends = FRIENDS.map(function(f){
-    return { id:f.name, username:f.name, displayName:f.name, color:f.color, cards:f.cards };
-  });
-  // Add accepted real friends (cards will be empty until viewed, that's ok for dashboard)
+  var allFriends = [];
+  // Real accepted friends
   (_friendsCache||[]).forEach(function(f) {
     var isMe = f.from_user_id === currentUser.id;
     var name = isMe ? (f.to_username||f.to_email) : (f.from_username||f.from_email);
@@ -1670,23 +1668,7 @@ function quickOwn(id) {
 }
 
 // ── FRIENDS ──────────────────────────────────────────────
-var FRIENDS = [
-  {name:'AshKetchum99',color:'#5aaced',cards:[
-    {id:'base1-4',name:'Charizard',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/4.png'},_budget:150,_notes:'1st edition only!'},
-    {id:'base1-58',name:'Pikachu',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/58.png'},_budget:25,_notes:null},
-    {id:'pop4-3',name:'Mew',set:{name:'POP Series 4'},images:{small:'https://images.pokemontcg.io/pop4/3.png'},_budget:null,_notes:'Any condition fine'},
-  ]},
-  {name:'MistyWaters',color:'#4acf8a',cards:[
-    {id:'base1-2',name:'Blastoise',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/2.png'},_budget:80,_notes:'Prefer NM or better'},
-    {id:'fossil-10',name:'Lapras',set:{name:'Fossil'},images:{small:'https://images.pokemontcg.io/fossil/10.png'},_budget:null,_notes:null},
-    {id:'base1-6',name:'Gyarados',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/6.png'},_budget:40,_notes:null},
-  ]},
-  {name:'BrockRock',color:'#e85a6a',cards:[
-    {id:'base1-8',name:'Machamp',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/8.png'},_budget:null,_notes:null},
-    {id:'fossil-5',name:'Gengar',set:{name:'Fossil'},images:{small:'https://images.pokemontcg.io/fossil/5.png'},_budget:60,_notes:'Holo only'},
-    {id:'jungle-11',name:'Snorlax',set:{name:'Jungle'},images:{small:'https://images.pokemontcg.io/jungle/11.png'},_budget:null,_notes:null},
-  ]},
-];
+var FRIENDS = []; // Demo friends removed
 
 // ── FRIENDS ──────────────────────────────────────────────
 var activeFriendId  = null;
@@ -1920,11 +1902,7 @@ function renderPendingRequests() {
 
 function renderFriendsList() {
   var friends = _friendsCache || [];
-  // Also show demo friends
-  var demoFriends = FRIENDS.map(function(f){
-    return { _demo:true, id:'demo_'+f.name, displayName:f.name, color:f.color, cards:f.cards };
-  });
-  var allFriends = friends.concat(demoFriends);
+  var allFriends = friends.slice();
   var listEl = document.getElementById('friend-list');
   if (!listEl) return;
   listEl.innerHTML = '';
@@ -1961,16 +1939,38 @@ function viewFriend(f) {
   var name     = f._demo ? f.displayName : (isMe ? (f.to_username||f.to_email) : (f.from_username||f.from_email));
   var color    = f.color || FRIEND_COLORS[Math.abs(hashStr((f.id||'').toString()))%FRIEND_COLORS.length];
   var initials = (name||'?').slice(0,2).toUpperCase();
+    // Get the friend's user ID - could be null if they haven't logged in yet to claim request
   var friendUserId = f._demo ? null : (isMe ? f.to_user_id : f.from_user_id);
-  var wrap = document.getElementById('friend-detail-wrap');
+  var friendEmail  = f._demo ? null : (isMe ? f.to_email : f.from_email);
   wrap.innerHTML = '<div class="loading"><span class="spinner"></span>Loading wishlist...</div>';
 
-  var cardsPromise = (friendUserId && sb)
-    ? sb.from('wishlists').select('card_data').eq('user_id', friendUserId).then(function(res) {
-        if (res.error) { console.error('viewFriend:', res.error.message); return f.cards||[]; }
-        return (res.data||[]).map(function(r){ return r.card_data; });
-      })
-    : Promise.resolve(f.cards||[]);
+  var cardsPromise;
+  if (friendUserId && sb) {
+    // Fetch by user_id
+    cardsPromise = sb.from('wishlists').select('card_data').eq('user_id', friendUserId)
+      .then(function(res) {
+        if (res.error) {
+          console.error('viewFriend wishlist error:', res.error.message);
+          if (res.error.message.includes('policy') || res.error.code === '42501') {
+            // RLS is blocking - show SQL fix instruction
+            var rlsDiv = document.createElement('div');
+            rlsDiv.className = 'friend-detail';
+            rlsDiv.innerHTML = '<div style="padding:30px 20px;text-align:center;"><div style="font-size:36px;margin-bottom:12px">🔒</div><p style="font-weight:600;color:var(--red);">Wishlist access blocked</p><p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;">Run this SQL in Supabase to fix:<br><br><code style="background:var(--bg3);padding:6px 10px;border-radius:6px;font-size:11px;display:block;text-align:left;margin-top:6px;">create policy \"Friends can view wishlists\" on wishlists for select using (auth.uid() is not null);</code></p></div>';
+            wrap.innerHTML = ''; wrap.appendChild(rlsDiv);
+          }
+          return [];
+        }
+        var cards = (res.data||[]).map(function(r){ return r.card_data; });
+        console.log('viewFriend: loaded', cards.length, 'wishlist cards for', name);
+        return cards;
+      });
+  } else if (!friendUserId && !f._demo) {
+    // to_user_id is null - friend hasn't logged in yet to claim the request
+    wrap.innerHTML = '<div class="friend-detail"><div style="padding:40px 20px;text-align:center;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">⏳</div><p style="font-weight:600;">'+name+' has not signed in yet</p><p style="font-size:12px;margin-top:8px;">Their wishlist will appear once they open Collective and log in with their account.</p></div></div>';
+    return;
+  } else {
+    cardsPromise = Promise.resolve([]);
+  }
 
   cardsPromise.then(function(cards) {
     function buildWishHtml(cards) {
