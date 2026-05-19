@@ -341,11 +341,21 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .cal-day .day-event-label{font-size:9px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(232,200,74,0.15);border-radius:3px;padding:1px 4px;}
 .cal-empty{background:none;border:none;cursor:default;}
 .cal-empty:hover{background:none;border:none;}
-.event-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;transition:all .2s;}
-.event-card:hover{border-color:var(--accent);}
-.event-card .ev-title{font-weight:600;font-size:14px;}
-.event-card .ev-meta{font-size:12px;color:var(--muted);margin-top:3px;}
-.event-card .ev-notes{font-size:12px;color:var(--text);margin-top:6px;line-height:1.5;}
+.event-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;transition:all .2s;}
+.event-card.editable{cursor:pointer;}
+.event-card.editable:hover{border-color:var(--border2);}
+.event-card .ev-title{font-weight:600;font-size:15px;}
+.event-card .ev-meta{font-size:12px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.event-card .ev-creator{display:inline-flex;align-items:center;gap:5px;font-size:11px;background:var(--bg3);border-radius:20px;padding:2px 8px;}
+.event-card .ev-notes{font-size:12px;color:var(--text);margin-top:8px;line-height:1.5;padding:8px;background:var(--bg3);border-radius:8px;}
+.ev-rsvp-row{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.ev-rsvp-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:none;font-size:12px;font-family:var(--font-body);cursor:pointer;transition:all .2s;color:var(--muted);}
+.ev-rsvp-btn:hover{border-color:var(--green);color:var(--green);}
+.ev-rsvp-btn.going{background:rgba(74,207,138,0.12);border-color:var(--green);color:var(--green);font-weight:600;}
+.ev-rsvp-btn.not-going{background:rgba(232,90,106,0.1);border-color:var(--red);color:var(--red);font-weight:600;}
+.ev-attendees{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-left:auto;}
+.ev-attendee-av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border:2px solid var(--bg2);}
+.ev-attendee-count{font-size:11px;color:var(--muted);}
 .emoji-opt{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:18px;cursor:pointer;transition:all .2s;}
 .emoji-opt:hover,.emoji-opt.active{border-color:var(--accent);background:rgba(232,200,74,0.12);}
 
@@ -2567,6 +2577,7 @@ var calYear   = new Date().getFullYear();
 var calMonth  = new Date().getMonth();
 var calSelDay = null;
 var calEvents = [];
+var calRsvps  = [];
 var editingEventId = null;
 var pickedEmoji = '';
 
@@ -2575,13 +2586,20 @@ function renderEvents() {
 }
 
 function loadCalEvents() {
-  if (!sb || !currentUser) { calEvents = []; return Promise.resolve(); }
+  if (!sb || !currentUser) { calEvents = []; calRsvps = []; return Promise.resolve(); }
   var dStart = new Date(calYear, calMonth - 1, 1).toISOString().slice(0,10);
   var dEnd   = new Date(calYear, calMonth + 2, 1).toISOString().slice(0,10);
   return sb.from('events').select('*').gte('event_date', dStart).lt('event_date', dEnd)
     .then(function(res) {
       if (res.error) { console.error('loadCalEvents:', res.error.message); calEvents = []; return; }
       calEvents = res.data || [];
+      // Also load RSVPs for these events
+      if (!calEvents.length) { calRsvps = []; return; }
+      var eventIds = calEvents.map(function(e){ return e.id; });
+      return sb.from('event_rsvps').select('*').in('event_id', eventIds)
+        .then(function(r) {
+          calRsvps = r.error ? [] : (r.data || []);
+        });
     });
 }
 
@@ -2639,25 +2657,144 @@ function showDayPanel(ds) {
   var lbl = d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   panel.innerHTML = '';
   var hdr = document.createElement('div');
-  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;';
+  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;';
   hdr.innerHTML = '<span style="font-weight:600;font-size:14px;">'+lbl+'</span>';
   var addBtn = document.createElement('button');
-  addBtn.className='btn primary'; addBtn.style.cssText='font-size:12px;padding:5px 12px;'; addBtn.textContent='+ Add';
+  addBtn.className='btn primary'; addBtn.style.cssText='font-size:12px;padding:5px 12px;';
+  addBtn.textContent='+ Add Event';
   addBtn.addEventListener('click',function(){ openEventModal(ds); });
   hdr.appendChild(addBtn); panel.appendChild(hdr);
   if (!evs.length) {
-    var empty=document.createElement('p'); empty.style.cssText='font-size:13px;color:var(--muted);'; empty.textContent='No events — click + Add to create one.'; panel.appendChild(empty); return;
+    var empty=document.createElement('p');
+    empty.style.cssText='font-size:13px;color:var(--muted);';
+    empty.textContent='No events — click + Add Event to create one.';
+    panel.appendChild(empty); return;
   }
   evs.forEach(function(ev) {
-    var card=document.createElement('div'); card.className='event-card';
-    var who=ev.created_by_username||ev.created_by_email||'Someone';
-    card.innerHTML=(ev.emoji?'<span style="font-size:22px;margin-right:6px;">'+ev.emoji+'</span>':'')+
-      '<span class="ev-title">'+ev.title+'</span>'+
-      '<div class="ev-meta">Added by '+who+'</div>'+
-      (ev.notes?'<div class="ev-notes">'+ev.notes+'</div>':'');
-    if (ev.created_by===currentUser.id) card.addEventListener('click',function(){ openEventModal(ds,ev); });
+    var card = document.createElement('div');
+    card.className = 'event-card' + (ev.created_by===currentUser.id ? ' editable' : '');
+
+    // Title row
+    var titleRow = document.createElement('div');
+    titleRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
+    if (ev.emoji) {
+      var emoSpan = document.createElement('span');
+      emoSpan.style.fontSize = '22px'; emoSpan.textContent = ev.emoji;
+      titleRow.appendChild(emoSpan);
+    }
+    var titleEl = document.createElement('div');
+    titleEl.className = 'ev-title'; titleEl.textContent = ev.title;
+    titleRow.appendChild(titleEl);
+    if (ev.created_by === currentUser.id) {
+      var editBtn = document.createElement('button');
+      editBtn.className = 'btn'; editBtn.style.cssText = 'font-size:10px;padding:2px 8px;margin-left:auto;';
+      editBtn.textContent = '✏️ Edit';
+      editBtn.addEventListener('click', function(e){ e.stopPropagation(); openEventModal(ds, ev); });
+      titleRow.appendChild(editBtn);
+    }
+    card.appendChild(titleRow);
+
+    // Creator badge
+    var meta = document.createElement('div');
+    meta.className = 'ev-meta';
+    var who = ev.created_by_username || ev.created_by_email || 'Someone';
+    var creatorBadge = document.createElement('span');
+    creatorBadge.className = 'ev-creator';
+    creatorBadge.innerHTML = '👤 ' + who;
+    meta.appendChild(creatorBadge);
+    card.appendChild(meta);
+
+    // Notes
+    if (ev.notes) {
+      var notesEl = document.createElement('div');
+      notesEl.className = 'ev-notes'; notesEl.textContent = ev.notes;
+      card.appendChild(notesEl);
+    }
+
+    // RSVP row
+    var rsvpRow = document.createElement('div');
+    rsvpRow.className = 'ev-rsvp-row';
+
+    // Get RSVPs for this event
+    var evRsvps = calRsvps.filter(function(r){ return r.event_id===ev.id; });
+    var myRsvp  = evRsvps.find(function(r){ return r.user_id===currentUser.id; });
+    var goingList = evRsvps.filter(function(r){ return r.status==='going'; });
+
+    // Going button
+    var goingBtn = document.createElement('button');
+    goingBtn.className = 'ev-rsvp-btn' + (myRsvp&&myRsvp.status==='going'?' going':'');
+    goingBtn.innerHTML = '✓ Going' + (myRsvp&&myRsvp.status==='going'?' ✓':'');
+    goingBtn.addEventListener('click', function(){ toggleRsvp(ev.id, 'going', ds); });
+    rsvpRow.appendChild(goingBtn);
+
+    // Not going button
+    var notGoingBtn = document.createElement('button');
+    notGoingBtn.className = 'ev-rsvp-btn' + (myRsvp&&myRsvp.status==='not_going'?' not-going':'');
+    notGoingBtn.textContent = myRsvp&&myRsvp.status==='not_going' ? '✗ Not going' : "Can't go";
+    notGoingBtn.addEventListener('click', function(){ toggleRsvp(ev.id, 'not_going', ds); });
+    rsvpRow.appendChild(notGoingBtn);
+
+    // Attendee avatars
+    if (goingList.length) {
+      var avWrap = document.createElement('div');
+      avWrap.className = 'ev-attendees';
+      goingList.slice(0,5).forEach(function(r) {
+        var av = document.createElement('div');
+        var col = FRIEND_COLORS[Math.abs(hashStr(r.user_id))%FRIEND_COLORS.length];
+        av.className = 'ev-attendee-av';
+        av.style.cssText = 'background:'+col+'33;color:'+col+';';
+        av.title = r.username || r.email || '';
+        av.textContent = (r.username||r.email||'?')[0].toUpperCase();
+        avWrap.appendChild(av);
+      });
+      var countEl = document.createElement('span');
+      countEl.className = 'ev-attendee-count';
+      countEl.textContent = goingList.length + ' going';
+      avWrap.appendChild(countEl);
+      rsvpRow.appendChild(avWrap);
+    }
+
+    card.appendChild(rsvpRow);
     panel.appendChild(card);
   });
+}
+
+// Toggle RSVP for an event
+function toggleRsvp(eventId, status, ds) {
+  if (!sb || !currentUser) return;
+  var uname = profileData.username || currentUser.email.split('@')[0];
+  var myRsvp = calRsvps.find(function(r){ return r.event_id===eventId && r.user_id===currentUser.id; });
+
+  // If clicking same status, remove the RSVP (toggle off)
+  if (myRsvp && myRsvp.status === status) {
+    sb.from('event_rsvps').delete().eq('id', myRsvp.id).then(function(res) {
+      if (res.error) { showToast('Error: '+res.error.message,'tr'); return; }
+      loadCalEvents().then(function(){ drawCalendar(); showDayPanel(ds); });
+    });
+    return;
+  }
+
+  if (myRsvp) {
+    // Update existing
+    sb.from('event_rsvps').update({ status: status }).eq('id', myRsvp.id).then(function(res) {
+      if (res.error) { showToast('Error: '+res.error.message,'tr'); return; }
+      showToast(status==='going' ? 'Marked as going ✓' : 'Marked as not going');
+      loadCalEvents().then(function(){ drawCalendar(); showDayPanel(ds); });
+    });
+  } else {
+    // Insert new
+    sb.from('event_rsvps').insert({
+      event_id: eventId,
+      user_id:  currentUser.id,
+      email:    currentUser.email,
+      username: uname,
+      status:   status
+    }).then(function(res) {
+      if (res.error) { showToast('Error: '+res.error.message,'tr'); return; }
+      showToast(status==='going' ? 'Marked as going ✓' : 'Marked as not going');
+      loadCalEvents().then(function(){ drawCalendar(); showDayPanel(ds); });
+    });
+  }
 }
 
 function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} loadCalEvents().then(drawCalendar); }
