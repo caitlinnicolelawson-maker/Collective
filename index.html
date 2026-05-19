@@ -209,6 +209,9 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .pick-item:hover{border-color:var(--accent);color:var(--accent);}
 
 /* TRADE ZONE */
+.trade-tabs{display:flex;gap:8px;margin-bottom:20px;}
+.trade-tab{padding:8px 18px;border-radius:20px;border:1px solid var(--border);background:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:var(--font-body);transition:all .2s;}
+.trade-tab.active{background:rgba(232,200,74,0.12);border-color:var(--accent);color:var(--accent);}
 .trade-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;}
 .trade-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;position:relative;}
 .trade-card img{width:100%;aspect-ratio:3/4;object-fit:contain;background:var(--bg3);}
@@ -216,6 +219,13 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .trade-status{position:absolute;top:8px;left:8px;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;}
 .ts-available{background:rgba(74,207,138,0.2);color:var(--green);}
 .ts-traded{background:rgba(136,136,150,0.2);color:var(--muted);}
+.trade-card .tc-owner{font-size:11px;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:4px;}
+.offer-badge{position:absolute;top:8px;right:8px;background:rgba(232,200,74,0.9);color:#000;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;}
+.trade-offer-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;}
+.trade-offer-card img{width:48px;border-radius:6px;flex-shrink:0;}
+.trade-offer-card .to-info{flex:1;}
+.trade-offer-card .to-from{font-size:12px;color:var(--muted);}
+.trade-offer-card .to-msg{font-size:13px;margin-top:3px;font-style:italic;color:var(--text);}
 
 /* POKÉDEX */
 .pdex-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px;}
@@ -738,7 +748,13 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
   <!-- TRADE ZONE -->
   <div class="page" id="page-trade">
     <div class="topbar"><h2>Trade Zone</h2><button class="btn primary" onclick="openTradeModal()">+ List a Card</button></div>
-    <p style="color:var(--muted);font-size:14px;margin-bottom:24px">List cards you're willing to trade. Mark as Traded to remove from your collection.</p>
+    <div class="trade-tabs">
+      <button class="trade-tab active" id="trade-tab-mine" onclick="setTradeTab('mine',this)">My Listings</button>
+      <button class="trade-tab" id="trade-tab-all" onclick="setTradeTab('all',this)">All Friends</button>
+      <button class="trade-tab" id="trade-tab-offers" onclick="setTradeTab('offers',this)">
+        Offers Received <span id="trade-offers-badge" style="display:none;background:var(--accent);color:#000;border-radius:20px;padding:1px 7px;font-size:11px;margin-left:4px;">0</span>
+      </button>
+    </div>
     <div id="trade-content"><div class="empty"><div class="em">🔄</div><p>No cards listed for trade</p></div></div>
   </div>
 
@@ -802,6 +818,22 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
     <div class="mini-modal-title">🔄 List Card for Trade</div>
     <div class="pick-list" id="trade-pick-list"></div>
     <button class="btn" style="width:100%;margin-top:8px" onclick="closeTradeModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- TRADE OFFER MODAL -->
+<div class="mini-modal-overlay" id="offer-modal">
+  <div class="mini-modal-box">
+    <div class="mini-modal-title">🤝 Offer a Trade</div>
+    <div class="mini-modal-sub">You are offering to trade for: <strong id="offer-modal-for"></strong></div>
+    <div class="mini-field">
+      <label>Message (optional)</label>
+      <textarea id="offer-message" rows="3" placeholder="e.g. I have a Charizard GX I could offer in return…"></textarea>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" style="flex:1" onclick="sendTradeOffer()">Send Offer 🤝</button>
+      <button class="btn" onclick="closeOfferModal()">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -2876,4 +2908,240 @@ function renderPokedex() {
 }
 </script>
 </body>
-</html>
+</html>// ── TRADE ZONE ───────────────────────────────────────────────────────────
+var tradeTab = 'mine'; // 'mine', 'all', 'offers'
+
+function setTradeTab(tab, el) {
+  tradeTab = tab;
+  document.querySelectorAll('.trade-tab').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+  renderTrade();
+}
+
+// ── Supabase trade helpers ────────────────────────────────────────────────
+function dbSaveTrade(trade) {
+  if (!sb || !currentUser) return Promise.resolve();
+  var uname = profileData.username || currentUser.email.split('@')[0];
+  return sb.from('trades').upsert({
+    id:             trade.id,
+    user_id:        currentUser.id,
+    username:       uname,
+    card_id:        trade.cardId,
+    card_data:      trade.cardSnap,
+    status:         trade.status
+  }, { onConflict: 'id' }).then(function(res){
+    if (res.error) console.error('dbSaveTrade:', res.error.message);
+    return res;
+  });
+}
+function dbDeleteTrade(tradeId) {
+  if (!sb || !currentUser) return Promise.resolve();
+  return sb.from('trades').delete().eq('id', tradeId);
+}
+function dbLoadMyTrades() {
+  if (!sb || !currentUser) return Promise.resolve([]);
+  return sb.from('trades').select('*').eq('user_id', currentUser.id)
+    .then(function(res){ return res.error ? [] : (res.data||[]); });
+}
+function dbLoadAllTrades() {
+  if (!sb || !currentUser) return Promise.resolve([]);
+  return sb.from('trades').select('*').eq('status','available')
+    .then(function(res){ return res.error ? [] : (res.data||[]); });
+}
+function dbLoadOffersToMe() {
+  if (!sb || !currentUser) return Promise.resolve([]);
+  return sb.from('trade_offers').select('*').eq('to_user_id', currentUser.id).eq('status','pending')
+    .then(function(res){ return res.error ? [] : (res.data||[]); });
+}
+
+function saveTrades() {
+  // Also persist to Supabase
+  trades.forEach(function(t){ dbSaveTrade(t); });
+  try { if (currentUser) localStorage.setItem('trades_' + currentUser.id, JSON.stringify(trades)); } catch(e){}
+}
+function loadTrades() {
+  try { trades = currentUser ? JSON.parse(localStorage.getItem('trades_' + currentUser.id) || '[]') : []; } catch(e){ trades=[]; }
+}
+
+function renderTrade() {
+  var el = document.getElementById('trade-content');
+  el.innerHTML = '<div class="loading"><span class="spinner"></span>Loading...</div>';
+
+  if (tradeTab === 'mine') {
+    renderMyTrades(el);
+  } else if (tradeTab === 'all') {
+    renderAllTrades(el);
+  } else {
+    renderTradeOffers(el);
+  }
+}
+
+function renderMyTrades(el) {
+  dbLoadMyTrades().then(function(rows) {
+    // Merge with localStorage for immediate display
+    if (!rows.length && !trades.length) {
+      el.innerHTML = '<div class="empty"><div class="em">🔄</div><p>No cards listed</p><small>Click "+ List a Card" to get started</small></div>';
+      return;
+    }
+    var allTrades = rows.length ? rows : trades;
+    el.innerHTML = '<div class="trade-grid">' + allTrades.map(function(t) {
+      var card = t.card_data || col.find(function(c){return c.id===t.cardId||c.id===t.card_id;}) || t.cardSnap;
+      if (!card) return '';
+      var p = getPrice(card);
+      var isTraded = t.status === 'traded';
+      return '<div class="trade-card" style="'+(isTraded?'opacity:.5':'')+'">' +
+        '<img src="'+(card.images&&card.images.small||'')+'" alt="'+card.name+'">' +
+        '<span class="trade-status '+(isTraded?'ts-traded':'ts-available')+'">'+(isTraded?'✓ Traded':'Available')+'</span>' +
+        '<div class="tc-info">' +
+          '<div style="font-weight:600;font-size:13px">'+card.name+'</div>' +
+          '<div style="font-size:11px;color:var(--muted)">'+((card.set&&card.set.name)||'')+'</div>' +
+          '<div style="font-size:12px;color:var(--accent);margin-top:2px">'+(p?'£'+p.toFixed(2):'—')+'</div>' +
+          '<div style="display:flex;gap:6px;margin-top:8px">' +
+            (isTraded
+              ? '<button class="btn danger" style="flex:1;font-size:11px;padding:5px" onclick="removeTrade(''+t.id+'')">Remove</button>'
+              : '<button class="btn primary" style="flex:1;font-size:11px;padding:5px" onclick="markTraded(''+t.id+'')">Mark Traded</button>' +
+                '<button class="btn danger" style="font-size:11px;padding:5px" onclick="removeTrade(''+t.id+'')">✕</button>'
+            ) +
+          '</div>' +
+        '</div></div>';
+    }).join('') + '</div>';
+  });
+}
+
+function renderAllTrades(el) {
+  dbLoadAllTrades().then(function(rows) {
+    var others = rows.filter(function(r){ return r.user_id !== currentUser.id; });
+    if (!others.length) {
+      el.innerHTML = '<div class="empty"><div class="em">🔄</div><p>No friends have listed cards for trade yet</p></div>';
+      return;
+    }
+    el.innerHTML = '<div class="trade-grid">' + others.map(function(t) {
+      var card = t.card_data;
+      if (!card) return '';
+      var p = getPrice(card);
+      var iOwnIt = col.some(function(c){return c.id===(card.id||t.card_id);});
+      return '<div class="trade-card">' +
+        '<img src="'+(card.images&&card.images.small||'')+'" alt="'+card.name+'">' +
+        '<span class="trade-status ts-available">Available</span>' +
+        (iOwnIt ? '<span class="offer-badge">You have this!</span>' : '') +
+        '<div class="tc-info">' +
+          '<div class="tc-owner">👤 '+(t.username||'Trainer')+'</div>' +
+          '<div style="font-weight:600;font-size:13px">'+card.name+'</div>' +
+          '<div style="font-size:11px;color:var(--muted)">'+((card.set&&card.set.name)||'')+'</div>' +
+          '<div style="font-size:12px;color:var(--accent);margin-top:2px">'+(p?'£'+p.toFixed(2):'—')+'</div>' +
+          '<button class="btn primary" style="width:100%;font-size:11px;padding:5px;margin-top:8px" onclick="openOfferModal(''+t.id+'',''+t.user_id+'',''+t.username+'',''+card.name+'')">🤝 Offer Trade</button>' +
+        '</div></div>';
+    }).join('') + '</div>';
+  });
+}
+
+function renderTradeOffers(el) {
+  dbLoadOffersToMe().then(function(offers) {
+    var badge = document.getElementById('trade-offers-badge');
+    if (badge) { badge.style.display = offers.length ? 'inline' : 'none'; badge.textContent = offers.length; }
+    if (!offers.length) {
+      el.innerHTML = '<div class="empty"><div class="em">🤝</div><p>No pending trade offers</p></div>';
+      return;
+    }
+    el.innerHTML = '';
+    offers.forEach(function(offer) {
+      var card = document.createElement('div');
+      card.className = 'trade-offer-card';
+      card.innerHTML =
+        '<div class="to-info">' +
+          '<div style="font-weight:600;font-size:13px">🤝 Trade Offer</div>' +
+          '<div class="to-from">From: '+(offer.from_username||offer.from_email||'Someone')+'</div>' +
+          '<div class="to-from">For your: <strong>'+(offer.for_card_name||'card')+'</strong></div>' +
+          (offer.message ? '<div class="to-msg">"'+offer.message+'"</div>' : '') +
+          '<div style="display:flex;gap:6px;margin-top:8px">' +
+            '<button class="btn primary" style="flex:1;font-size:11px;padding:5px" onclick="respondOffer(''+offer.id+'','accepted')">✓ Accept</button>' +
+            '<button class="btn danger" style="flex:1;font-size:11px;padding:5px" onclick="respondOffer(''+offer.id+'','declined')">✕ Decline</button>' +
+          '</div>' +
+        '</div>';
+      el.appendChild(card);
+    });
+  });
+}
+
+// Offer trade modal
+var _offerTradeId = null, _offerToUserId = null, _offerToUsername = null, _offerCardName = null;
+function openOfferModal(tradeId, toUserId, toUsername, cardName) {
+  _offerTradeId = tradeId; _offerToUserId = toUserId;
+  _offerToUsername = toUsername; _offerCardName = cardName;
+  document.getElementById('offer-modal-for').textContent = cardName + ' from ' + toUsername;
+  document.getElementById('offer-message').value = '';
+  document.getElementById('offer-modal').classList.add('open');
+}
+function closeOfferModal() { document.getElementById('offer-modal').classList.remove('open'); }
+function sendTradeOffer() {
+  var msg = document.getElementById('offer-message').value.trim();
+  if (!sb || !currentUser || !_offerTradeId) return;
+  var uname = profileData.username || currentUser.email.split('@')[0];
+  sb.from('trade_offers').insert({
+    trade_id:       _offerTradeId,
+    from_user_id:   currentUser.id,
+    from_email:     currentUser.email,
+    from_username:  uname,
+    to_user_id:     _offerToUserId,
+    for_card_name:  _offerCardName,
+    message:        msg || null,
+    status:         'pending'
+  }).then(function(res) {
+    if (res.error) { showToast('Error: '+res.error.message,'tr'); return; }
+    closeOfferModal();
+    showToast('Trade offer sent to '+_offerToUsername+' 🤝');
+  });
+}
+function respondOffer(offerId, status) {
+  if (!sb) return;
+  sb.from('trade_offers').update({ status: status }).eq('id', offerId).then(function(res) {
+    if (res.error) { showToast('Error','tr'); return; }
+    showToast(status==='accepted' ? 'Offer accepted! 🎉' : 'Offer declined');
+    renderTrade();
+  });
+}
+
+function openTradeModal() {
+  var listed = trades.map(function(t){return t.cardId||t.card_id;});
+  var avail  = col.filter(function(c){return !listed.includes(c.id);});
+  document.getElementById('trade-pick-list').innerHTML = avail.length
+    ? avail.map(function(card){
+        return '<div class="pick-item" id="tp-'+card.id+'">' +
+          '<img src="'+(card.images&&card.images.small||'')+'" style="width:32px;border-radius:4px">' +
+          '<div><div style="font-weight:600;font-size:13px">'+card.name+'</div><div style="font-size:11px;color:var(--muted)">'+((card.set&&card.set.name)||'')+'</div></div>' +
+          '<span style="margin-left:auto;font-size:12px;color:var(--accent)">'+(getPrice(card)?'£'+getPrice(card).toFixed(2):'—')+'</span></div>';
+      }).join('')
+    : '<p style="color:var(--muted);font-size:13px;padding:8px">No cards available to list.</p>';
+  // Add click listeners
+  avail.forEach(function(card) {
+    var el = document.getElementById('tp-'+card.id);
+    if (el) el.addEventListener('click', function(){ addTradeCard(card.id); });
+  });
+  document.getElementById('trade-modal').classList.add('open');
+}
+function closeTradeModal() { document.getElementById('trade-modal').classList.remove('open'); }
+
+function addTradeCard(cardId) {
+  var card = col.find(function(c){return c.id===cardId;}); if (!card) return;
+  var t = {id: Date.now().toString(), cardId: cardId, cardSnap: card, status: 'available'};
+  trades.push(t);
+  dbSaveTrade(t);
+  try { if (currentUser) localStorage.setItem('trades_'+currentUser.id, JSON.stringify(trades)); } catch(e){}
+  closeTradeModal(); renderTrade(); showToast('Listed for trade 🔄');
+}
+function markTraded(tradeId) {
+  var t = trades.find(function(x){return x.id===tradeId;}); if (!t) return;
+  t.status = 'traded';
+  col = col.filter(function(c){return c.id!==t.cardId;});
+  binder = binder.map(function(pg){return pg.map(function(s){return s===t.cardId?null:s;});});
+  saveBinder(); dbSaveTrade(t); dbRemoveCol(t.cardId);
+  try { if (currentUser) localStorage.setItem('trades_'+currentUser.id, JSON.stringify(trades)); } catch(e){}
+  updateStats(); renderTrade(); showToast('Marked as traded — removed from collection ✓');
+}
+function removeTrade(tradeId) {
+  dbDeleteTrade(tradeId);
+  trades = trades.filter(function(x){return x.id!==tradeId;});
+  try { if (currentUser) localStorage.setItem('trades_'+currentUser.id, JSON.stringify(trades)); } catch(e){}
+  renderTrade(); showToast('Removed from Trade Zone');
+}
+
