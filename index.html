@@ -325,6 +325,30 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .confirm-box p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;}
 .confirm-box .confirm-actions{display:flex;gap:10px;justify-content:center;}
 
+/* EVENTS CALENDAR */
+#cal-grid{user-select:none;}
+.cal-day-header{text-align:center;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:4px 0;}
+.cal-day{min-height:64px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:6px;cursor:pointer;transition:all .2s;position:relative;}
+.cal-day:hover{border-color:var(--border2);background:var(--bg3);}
+.cal-day.today{border-color:var(--accent);background:rgba(232,200,74,0.07);}
+.cal-day.selected{border-color:var(--accent);background:rgba(232,200,74,0.12);}
+.cal-day.other-month{opacity:.3;}
+.cal-day .day-num{font-size:12px;font-weight:600;color:var(--muted);}
+.cal-day.today .day-num{color:var(--accent);}
+.cal-day .day-emoji{font-size:20px;text-align:center;margin:2px 0;}
+.cal-day .day-events{display:flex;flex-direction:column;gap:2px;margin-top:2px;}
+.cal-day .day-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+.cal-day .day-event-label{font-size:9px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(232,200,74,0.15);border-radius:3px;padding:1px 4px;}
+.cal-empty{background:none;border:none;cursor:default;}
+.cal-empty:hover{background:none;border:none;}
+.event-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;cursor:pointer;transition:all .2s;}
+.event-card:hover{border-color:var(--accent);}
+.event-card .ev-title{font-weight:600;font-size:14px;}
+.event-card .ev-meta{font-size:12px;color:var(--muted);margin-top:3px;}
+.event-card .ev-notes{font-size:12px;color:var(--text);margin-top:6px;line-height:1.5;}
+.emoji-opt{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:18px;cursor:pointer;transition:all .2s;}
+.emoji-opt:hover,.emoji-opt.active{border-color:var(--accent);background:rgba(232,200,74,0.12);}
+
 /* DASHBOARD FRIEND WISHLISTS */
 .friends-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;}
 .fw-card-wrap{position:relative;cursor:pointer;}
@@ -391,6 +415,7 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
     <button class="nav-item" id="nav-trade" onclick="showPage('trade')"><span class="icon">🔄</span><span>Trade Zone</span></button>
     <button class="nav-item" id="nav-pokedex" onclick="showPage('pokedex')"><span class="icon">📖</span><span>Pokédex</span></button>
     <div class="nav-section">Account</div>
+    <button class="nav-item" id="nav-events" onclick="showPage('events')"><span class="icon">📅</span><span>Events</span></button>
     <button class="nav-item" id="nav-profile" onclick="showPage('profile')"><span class="icon">👤</span><span>My Profile</span></button>
   </div>
   <div class="sidebar-bottom">
@@ -523,6 +548,41 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
       </div>
       <div id="friend-detail-wrap">
         <div class="empty" style="padding:60px 20px"><div class="em">👥</div><p>Select a friend to view their wishlist</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EVENTS -->
+  <div class="page" id="page-events">
+    <div class="topbar">
+      <h2>Events</h2>
+      <button class="btn primary" onclick="openEventModal()">+ Add Event</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">A shared calendar — you and your friends can all add events. Add an emoji to make a day stand out!</p>
+    <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+      <!-- Calendar -->
+      <div style="flex:1;min-width:320px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button class="btn" onclick="calPrev()">←</button>
+          <span id="cal-title" style="font-family:var(--font-heading);font-size:22px;letter-spacing:1px;"></span>
+          <button class="btn" onclick="calNext()">→</button>
+        </div>
+        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;"></div>
+        <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--muted)">Mon</span>
+          <span style="font-size:11px;color:var(--muted)">Tue</span>
+          <span style="font-size:11px;color:var(--muted)">Wed</span>
+          <span style="font-size:11px;color:var(--muted)">Thu</span>
+          <span style="font-size:11px;color:var(--muted)">Fri</span>
+          <span style="font-size:11px;color:var(--muted)">Sat</span>
+          <span style="font-size:11px;color:var(--muted)">Sun</span>
+        </div>
+      </div>
+      <!-- Event list for selected day -->
+      <div style="width:300px;flex-shrink:0;">
+        <div id="cal-day-panel">
+          <p style="font-size:13px;color:var(--muted);">Click a day to see events</p>
+        </div>
       </div>
     </div>
   </div>
@@ -732,6 +792,45 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
     <div class="mini-modal-title">🔄 List Card for Trade</div>
     <div class="pick-list" id="trade-pick-list"></div>
     <button class="btn" style="width:100%;margin-top:8px" onclick="closeTradeModal()">Cancel</button>
+  </div>
+</div>
+
+<div class="mini-modal-overlay" id="event-modal">
+  <div class="mini-modal-box">
+    <div class="mini-modal-title" id="event-modal-title">Add Event</div>
+    <div class="mini-field">
+      <label>Date</label>
+      <input type="date" id="event-date">
+    </div>
+    <div class="mini-field">
+      <label>Event Name</label>
+      <input type="text" id="event-title-input" placeholder="e.g. Card show at ExCeL London">
+    </div>
+    <div class="mini-field">
+      <label>Emoji (optional — makes this day stand out)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;" id="emoji-picker">
+        <button class="emoji-opt" onclick="pickEmoji(this,'🎪')">🎪</button>
+        <button class="emoji-opt" onclick="pickEmoji(this,'🃏')">🃏</button>
+        <button class="emoji-opt" onclick="pickEmoji(this,'🏆')">🏆</button>
+        <button class="emoji-opt" onclick="pickEmoji(this,'🎉')">🎉</button>
+        <button class="emoji-opt" onclick="pickEmoji(this,'⭐')">⭐</button>
+        <button class="emoji-opt" onclick="pickEmoji(this,'🔥')">🔥</button>
+        <button class="emoji-opt" onclick="pickEmoji(this,'💰')">💰</button>
+        <button class="emoji-opt" onclick="pickEmoji(this,'🤝')">🤝</button>
+        <button class="emoji-opt" onclick="pickEmoji(this,'📦')">📦</button>
+        <button class="emoji-opt" onclick="pickEmoji(this,'🎮')">🎮</button>
+      </div>
+      <input type="text" id="event-emoji" placeholder="Or type any emoji…" maxlength="2" style="width:80px;">
+    </div>
+    <div class="mini-field">
+      <label>Notes (optional)</label>
+      <textarea id="event-notes" rows="2" placeholder="Location, details…"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn primary" style="flex:1" id="event-save-btn" onclick="saveEvent()">Add Event</button>
+      <button class="btn" onclick="closeEventModal()">Cancel</button>
+    </div>
+    <button class="btn danger" id="event-delete-btn" style="width:100%;margin-top:8px;display:none;" onclick="deleteEvent()">🗑 Delete Event</button>
   </div>
 </div>
 
@@ -1019,7 +1118,7 @@ function showPage(id) {
   document.getElementById('page-' + id).classList.add('active');
   var nav = document.getElementById('nav-' + id);
   if (nav) nav.classList.add('active');
-  var renders = { dashboard: renderDash, collection: renderCol, wishlist: renderWish, friends: renderFriends, binder: renderBinder, trade: renderTrade, pokedex: renderPokedex, profile: renderProfile };
+  var renders = { dashboard: renderDash, collection: renderCol, wishlist: renderWish, friends: renderFriends, binder: renderBinder, trade: renderTrade, pokedex: renderPokedex, profile: renderProfile, events: renderEvents };
   if (renders[id]) renders[id]();
 }
 
@@ -1288,12 +1387,17 @@ function renderDash() {
 }
 
 function renderDashFriendsWishlists() {
-  loadFriends();
   var el = document.getElementById('dash-friends-wishlists');
   if (!el) return;
-  var allFriends = friendsList.concat(FRIENDS.map(function(f){
-    return { id:f.name, username:f.name, displayName:f.name, color:f.color, cards:f.cards };
-  }));
+  // Demo friends only for dashboard (real friend wishlists loaded async in viewFriend)
+  var allFriends = [];
+  // Real accepted friends
+  (_friendsCache||[]).forEach(function(f) {
+    var isMe = f.from_user_id === currentUser.id;
+    var name = isMe ? (f.to_username||f.to_email) : (f.from_username||f.from_email);
+    var color = FRIEND_COLORS[Math.abs(hashStr((f.id||'').toString()))%FRIEND_COLORS.length];
+    allFriends.push({ id:f.id, username:name, displayName:name, color:color, cards:[] });
+  });
   // Collect ALL cards from ALL friends, grouped by card ID
   // so if two friends want the same card, we show one card with two badges
   var cardMap = {}; // cardId -> { card, friends: [{name, color, initials, budget}] }
@@ -1564,23 +1668,7 @@ function quickOwn(id) {
 }
 
 // ── FRIENDS ──────────────────────────────────────────────
-var FRIENDS = [
-  {name:'AshKetchum99',color:'#5aaced',cards:[
-    {id:'base1-4',name:'Charizard',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/4.png'},_budget:150,_notes:'1st edition only!'},
-    {id:'base1-58',name:'Pikachu',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/58.png'},_budget:25,_notes:null},
-    {id:'pop4-3',name:'Mew',set:{name:'POP Series 4'},images:{small:'https://images.pokemontcg.io/pop4/3.png'},_budget:null,_notes:'Any condition fine'},
-  ]},
-  {name:'MistyWaters',color:'#4acf8a',cards:[
-    {id:'base1-2',name:'Blastoise',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/2.png'},_budget:80,_notes:'Prefer NM or better'},
-    {id:'fossil-10',name:'Lapras',set:{name:'Fossil'},images:{small:'https://images.pokemontcg.io/fossil/10.png'},_budget:null,_notes:null},
-    {id:'base1-6',name:'Gyarados',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/6.png'},_budget:40,_notes:null},
-  ]},
-  {name:'BrockRock',color:'#e85a6a',cards:[
-    {id:'base1-8',name:'Machamp',set:{name:'Base Set'},images:{small:'https://images.pokemontcg.io/base1/8.png'},_budget:null,_notes:null},
-    {id:'fossil-5',name:'Gengar',set:{name:'Fossil'},images:{small:'https://images.pokemontcg.io/fossil/5.png'},_budget:60,_notes:'Holo only'},
-    {id:'jungle-11',name:'Snorlax',set:{name:'Jungle'},images:{small:'https://images.pokemontcg.io/jungle/11.png'},_budget:null,_notes:null},
-  ]},
-];
+var FRIENDS = []; // Demo friends removed
 
 // ── FRIENDS ──────────────────────────────────────────────
 var activeFriendId  = null;
@@ -1599,15 +1687,36 @@ function dbFriendReq() { return sb && sb.from('friend_requests'); }
 // Load all friend data from Supabase
 function loadFriends() {
   if (!sb || !currentUser) { _friendsCache=[]; _pendingCache=[]; _sentCache=[]; return Promise.resolve(); }
+  var myEmail = currentUser.email.toLowerCase();
+  var myId    = currentUser.id;
+  // Fetch rows where I am sender OR receiver (by user_id OR email)
   return dbFriendReq()
     .select('*')
-    .or('from_user_id.eq.'+currentUser.id+',to_user_id.eq.'+currentUser.id)
+    .or('from_user_id.eq.'+myId+',to_user_id.eq.'+myId+',to_email.eq.'+myEmail)
     .then(function(res) {
       if (res.error) { console.error('loadFriends:', res.error.message); _friendsCache=[]; _pendingCache=[]; _sentCache=[]; return; }
       var rows = res.data || [];
       _friendsCache = rows.filter(function(r){ return r.status==='accepted'; });
-      _pendingCache = rows.filter(function(r){ return r.status==='pending' && r.to_user_id===currentUser.id; });
-      _sentCache    = rows.filter(function(r){ return r.status==='pending' && r.from_user_id===currentUser.id; });
+      // Pending received: either to_user_id matches me OR to_email matches my email
+      _pendingCache = rows.filter(function(r){
+        return r.status==='pending' && (r.to_user_id===myId || r.to_email===myEmail) && r.from_user_id!==myId;
+      });
+      _sentCache = rows.filter(function(r){ return r.status==='pending' && r.from_user_id===myId; });
+    });
+}
+
+// Link pending requests sent to my email to my user_id, then reload
+function matchPendingFriendRequests() {
+  if (!sb || !currentUser) return Promise.resolve();
+  var myEmail = currentUser.email.toLowerCase();
+  // Update any rows where to_email = my email but to_user_id is still null
+  return sb.from('friend_requests')
+    .update({ to_user_id: currentUser.id })
+    .eq('to_email', myEmail)
+    .is('to_user_id', null)
+    .then(function(res) {
+      if (res.error) console.warn('matchPending error:', res.error.message);
+      return loadFriends();
     });
 }
 
@@ -1793,11 +1902,7 @@ function renderPendingRequests() {
 
 function renderFriendsList() {
   var friends = _friendsCache || [];
-  // Also show demo friends
-  var demoFriends = FRIENDS.map(function(f){
-    return { _demo:true, id:'demo_'+f.name, displayName:f.name, color:f.color, cards:f.cards };
-  });
-  var allFriends = friends.concat(demoFriends);
+  var allFriends = friends.slice();
   var listEl = document.getElementById('friend-list');
   if (!listEl) return;
   listEl.innerHTML = '';
@@ -1830,33 +1935,68 @@ function renderFriendsList() {
 function viewFriend(f) {
   activeFriendId = f.id;
   renderFriendsList();
-  var isMe  = f.from_user_id === currentUser.id;
-  var name  = f._demo ? f.displayName : (isMe ? (f.to_username||f.to_email) : (f.from_username||f.from_email));
-  var color = f.color || FRIEND_COLORS[Math.abs(hashStr((f.id||'').toString()))%FRIEND_COLORS.length];
+  var isMe     = f.from_user_id === currentUser.id;
+  var name     = f._demo ? f.displayName : (isMe ? (f.to_username||f.to_email) : (f.from_username||f.from_email));
+  var color    = f.color || FRIEND_COLORS[Math.abs(hashStr((f.id||'').toString()))%FRIEND_COLORS.length];
   var initials = (name||'?').slice(0,2).toUpperCase();
-  var cards = f.cards || [];
-  var wishHtml = cards.length
-    ? cards.map(function(card){
-        var have=col.some(function(c){return c.id===card.id;});
-        var budget=card._budget?'<span class="wish-note-badge wish-budget-badge">💰 £'+card._budget.toFixed(2)+'</span>':'';
-        var notes=card._notes?'<div style="font-size:11px;color:var(--muted);margin-top:3px">📝 '+card._notes+'</div>':'';
-        return '<div class="fw-item">'+
-          '<img src="'+(card.images&&card.images.small||'')+'" style="width:36px;border-radius:4px" onerror="this.style.opacity=0">'+
-          '<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-weight:600">'+card.name+'</span>'+budget+'</div>'+
-          (card.set?'<div style="font-size:11px;color:var(--muted)">'+card.set.name+'</div>':'')+notes+'</div>'+
+    // Get the friend's user ID - could be null if they haven't logged in yet to claim request
+  var friendUserId = f._demo ? null : (isMe ? f.to_user_id : f.from_user_id);
+  var friendEmail  = f._demo ? null : (isMe ? f.to_email : f.from_email);
+  wrap.innerHTML = '<div class="loading"><span class="spinner"></span>Loading wishlist...</div>';
+
+  var cardsPromise;
+  if (friendUserId && sb) {
+    // Fetch by user_id
+    cardsPromise = sb.from('wishlists').select('card_data').eq('user_id', friendUserId)
+      .then(function(res) {
+        if (res.error) {
+          console.error('viewFriend wishlist error:', res.error.message);
+          if (res.error.message.includes('policy') || res.error.code === '42501') {
+            // RLS is blocking - show SQL fix instruction
+            var rlsDiv = document.createElement('div');
+            rlsDiv.className = 'friend-detail';
+            rlsDiv.innerHTML = '<div style="padding:30px 20px;text-align:center;"><div style="font-size:36px;margin-bottom:12px">🔒</div><p style="font-weight:600;color:var(--red);">Wishlist access blocked</p><p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;">Run this SQL in Supabase to fix:<br><br><code style="background:var(--bg3);padding:6px 10px;border-radius:6px;font-size:11px;display:block;text-align:left;margin-top:6px;">create policy \"Friends can view wishlists\" on wishlists for select using (auth.uid() is not null);</code></p></div>';
+            wrap.innerHTML = ''; wrap.appendChild(rlsDiv);
+          }
+          return [];
+        }
+        var cards = (res.data||[]).map(function(r){ return r.card_data; });
+        console.log('viewFriend: loaded', cards.length, 'wishlist cards for', name);
+        return cards;
+      });
+  } else if (!friendUserId && !f._demo) {
+    // to_user_id is null - friend hasn't logged in yet to claim the request
+    wrap.innerHTML = '<div class="friend-detail"><div style="padding:40px 20px;text-align:center;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">⏳</div><p style="font-weight:600;">'+name+' has not signed in yet</p><p style="font-size:12px;margin-top:8px;">Their wishlist will appear once they open Collective and log in with their account.</p></div></div>';
+    return;
+  } else {
+    cardsPromise = Promise.resolve([]);
+  }
+
+  cardsPromise.then(function(cards) {
+    function buildWishHtml(cards) {
+      if (!cards.length) return '<div class="empty" style="padding:30px 0"><div class="em">⭐</div><p style="font-size:13px">No wishlist items yet</p></div>';
+      return cards.map(function(card) {
+        var have   = col.some(function(c){return c.id===card.id;});
+        var budget = card._budget ? '<span class="wish-note-badge wish-budget-badge">💰 £'+card._budget.toFixed(2)+'</span>' : '';
+        var notes  = card._notes  ? '<div style="font-size:11px;color:var(--muted);margin-top:3px">📝 '+card._notes+'</div>' : '';
+        return '<div class="fw-item">' +
+          '<img src="'+(card.images&&card.images.small||'')+'" style="width:36px;border-radius:4px" onerror="this.style.opacity=0">' +
+          '<div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-weight:600">'+card.name+'</span>'+budget+'</div>' +
+          (card.set ? '<div style="font-size:11px;color:var(--muted)">'+card.set.name+'</div>' : '')+notes+'</div>' +
           '<span class="fw-tag" style="background:'+(have?'rgba(74,207,138,0.15)':'rgba(136,136,150,0.15)')+';color:'+(have?'var(--green)':'var(--muted)')+'">'+
           (have?'✓ You have it':'Wanted')+'</span></div>';
-      }).join('')
-    : '<div class="empty" style="padding:30px 0"><div class="em">⭐</div><p style="font-size:13px">No wishlist items yet</p></div>';
-  document.getElementById('friend-detail-wrap').innerHTML =
-    '<div class="friend-detail">'+
-    '<div class="friend-detail-header">'+
-      '<div class="friend-detail-av" style="background:'+color+'22;color:'+color+'">'+initials+'</div>'+
-      '<div><div style="font-weight:700;font-size:18px">'+name+'</div>'+
-      '<div style="font-size:12px;color:var(--muted)">'+(f._demo?'Demo account':'Friend')+'</div></div>'+
-    '</div>'+
-    '<p style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Wishlist · '+cards.length+' cards</p>'+
-    wishHtml+'</div>';
+      }).join('');
+    }
+    wrap.innerHTML =
+      '<div class="friend-detail">' +
+      '<div class="friend-detail-header">' +
+        '<div class="friend-detail-av" style="background:'+color+'22;color:'+color+'">'+initials+'</div>' +
+        '<div><div style="font-weight:700;font-size:18px">'+name+'</div>' +
+        '<div style="font-size:12px;color:var(--muted)">'+(f._demo?'Demo account':'Friend')+'</div></div>' +
+      '</div>' +
+      '<p style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Wishlist · '+cards.length+' cards</p>' +
+      buildWishHtml(cards) + '</div>';
+  });
 }
 
 
@@ -2419,6 +2559,151 @@ function fallbackCopy(text) {
   ta.focus(); ta.select();
   try { document.execCommand('copy'); document.getElementById('share-copied').style.display='block'; setTimeout(function(){ document.getElementById('share-copied').style.display='none'; }, 3000); } catch(e) {}
   document.body.removeChild(ta);
+}
+
+
+// ── EVENTS CALENDAR ──────────────────────────────────────────────────────
+var calYear   = new Date().getFullYear();
+var calMonth  = new Date().getMonth();
+var calSelDay = null;
+var calEvents = [];
+var editingEventId = null;
+var pickedEmoji = '';
+
+function renderEvents() {
+  loadCalEvents().then(drawCalendar);
+}
+
+function loadCalEvents() {
+  if (!sb || !currentUser) { calEvents = []; return Promise.resolve(); }
+  var dStart = new Date(calYear, calMonth - 1, 1).toISOString().slice(0,10);
+  var dEnd   = new Date(calYear, calMonth + 2, 1).toISOString().slice(0,10);
+  return sb.from('events').select('*').gte('event_date', dStart).lt('event_date', dEnd)
+    .then(function(res) {
+      if (res.error) { console.error('loadCalEvents:', res.error.message); calEvents = []; return; }
+      calEvents = res.data || [];
+    });
+}
+
+function drawCalendar() {
+  var titleEl = document.getElementById('cal-title');
+  var gridEl  = document.getElementById('cal-grid');
+  if (!titleEl || !gridEl) return;
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  titleEl.textContent = MONTHS[calMonth] + ' ' + calYear;
+  gridEl.innerHTML = '';
+  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function(d) {
+    var h = document.createElement('div');
+    h.className = 'cal-day-header'; h.textContent = d; gridEl.appendChild(h);
+  });
+  var firstDay = new Date(calYear, calMonth, 1).getDay();
+  var blanks   = (firstDay === 0) ? 6 : firstDay - 1;
+  var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  var today    = new Date().toISOString().slice(0,10);
+  for (var b = 0; b < blanks; b++) {
+    var bl = document.createElement('div'); bl.className = 'cal-day cal-empty'; gridEl.appendChild(bl);
+  }
+  for (var day = 1; day <= daysInMonth; day++) {
+    var mm = String(calMonth+1).padStart(2,'0'), dd = String(day).padStart(2,'0');
+    var ds = calYear+'-'+mm+'-'+dd;
+    var evs = calEvents.filter(function(e){ return e.event_date===ds; });
+    var cell = document.createElement('div');
+    cell.className = 'cal-day'+(ds===today?' today':'')+(ds===calSelDay?' selected':'');
+    var numEl = document.createElement('div');
+    numEl.className='day-num'; numEl.textContent=day; cell.appendChild(numEl);
+    var emojiEv = evs.find(function(e){ return e.emoji; });
+    if (emojiEv) {
+      var ee=document.createElement('div'); ee.className='day-emoji'; ee.textContent=emojiEv.emoji; cell.appendChild(ee);
+    }
+    if (evs.length) {
+      var ew=document.createElement('div'); ew.className='day-events';
+      evs.slice(0,2).forEach(function(ev){
+        var lbl=document.createElement('div'); lbl.className='day-event-label'; lbl.textContent=ev.title; ew.appendChild(lbl);
+      });
+      if (evs.length>2){ var m=document.createElement('div'); m.className='day-event-label'; m.style.color='var(--muted)'; m.textContent='+'+(evs.length-2)+' more'; ew.appendChild(m); }
+      cell.appendChild(ew);
+    }
+    (function(dateStr){ cell.addEventListener('click',function(){ selectCalDay(dateStr); }); })(ds);
+    gridEl.appendChild(cell);
+  }
+  if (calSelDay) showDayPanel(calSelDay);
+}
+
+function selectCalDay(ds) { calSelDay=ds; drawCalendar(); showDayPanel(ds); }
+
+function showDayPanel(ds) {
+  var panel = document.getElementById('cal-day-panel');
+  if (!panel) return;
+  var evs = calEvents.filter(function(e){ return e.event_date===ds; });
+  var d   = new Date(ds+'T12:00:00');
+  var lbl = d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  panel.innerHTML = '';
+  var hdr = document.createElement('div');
+  hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;';
+  hdr.innerHTML = '<span style="font-weight:600;font-size:14px;">'+lbl+'</span>';
+  var addBtn = document.createElement('button');
+  addBtn.className='btn primary'; addBtn.style.cssText='font-size:12px;padding:5px 12px;'; addBtn.textContent='+ Add';
+  addBtn.addEventListener('click',function(){ openEventModal(ds); });
+  hdr.appendChild(addBtn); panel.appendChild(hdr);
+  if (!evs.length) {
+    var empty=document.createElement('p'); empty.style.cssText='font-size:13px;color:var(--muted);'; empty.textContent='No events — click + Add to create one.'; panel.appendChild(empty); return;
+  }
+  evs.forEach(function(ev) {
+    var card=document.createElement('div'); card.className='event-card';
+    var who=ev.created_by_username||ev.created_by_email||'Someone';
+    card.innerHTML=(ev.emoji?'<span style="font-size:22px;margin-right:6px;">'+ev.emoji+'</span>':'')+
+      '<span class="ev-title">'+ev.title+'</span>'+
+      '<div class="ev-meta">Added by '+who+'</div>'+
+      (ev.notes?'<div class="ev-notes">'+ev.notes+'</div>':'');
+    if (ev.created_by===currentUser.id) card.addEventListener('click',function(){ openEventModal(ds,ev); });
+    panel.appendChild(card);
+  });
+}
+
+function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} loadCalEvents().then(drawCalendar); }
+function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} loadCalEvents().then(drawCalendar); }
+
+function openEventModal(dateStr, ev) {
+  editingEventId = ev?ev.id:null; pickedEmoji = ev?(ev.emoji||''):'';
+  document.getElementById('event-modal-title').textContent = ev?'Edit Event':'Add Event';
+  document.getElementById('event-save-btn').textContent    = ev?'Save Changes':'Add Event';
+  document.getElementById('event-date').value              = dateStr||(calSelDay||new Date().toISOString().slice(0,10));
+  document.getElementById('event-title-input').value       = ev?ev.title:'';
+  document.getElementById('event-emoji').value             = ev?(ev.emoji||''):'';
+  document.getElementById('event-notes').value             = ev?(ev.notes||''):'';
+  document.getElementById('event-delete-btn').style.display = ev?'block':'none';
+  document.querySelectorAll('.emoji-opt').forEach(function(b){ b.classList.remove('active'); if(pickedEmoji&&b.textContent===pickedEmoji) b.classList.add('active'); });
+  document.getElementById('event-modal').classList.add('open');
+}
+function closeEventModal() { document.getElementById('event-modal').classList.remove('open'); editingEventId=null; pickedEmoji=''; }
+function pickEmoji(btn,emoji) {
+  pickedEmoji=emoji; document.querySelectorAll('.emoji-opt').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active');
+  document.getElementById('event-emoji').value=emoji;
+}
+function saveEvent() {
+  var date=document.getElementById('event-date').value;
+  var title=document.getElementById('event-title-input').value.trim();
+  var emoji=document.getElementById('event-emoji').value.trim()||pickedEmoji||null;
+  var notes=document.getElementById('event-notes').value.trim()||null;
+  if (!date){showToast('Please pick a date','tr');return;}
+  if (!title){showToast('Please enter an event name','tr');return;}
+  if (!sb||!currentUser){showToast('Not connected','tr');return;}
+  var uname=profileData.username||currentUser.email.split('@')[0];
+  var payload={event_date:date,title:title,emoji:emoji,notes:notes,created_by:currentUser.id,created_by_email:currentUser.email,created_by_username:uname};
+  var op=editingEventId?sb.from('events').update(payload).eq('id',editingEventId):sb.from('events').insert(payload);
+  op.then(function(res){
+    if(res.error){showToast('Error: '+res.error.message,'tr');return;}
+    closeEventModal(); showToast(editingEventId?'Event updated':'Event added 📅');
+    loadCalEvents().then(function(){drawCalendar();if(calSelDay)showDayPanel(calSelDay);});
+  });
+}
+function deleteEvent() {
+  if (!editingEventId||!sb) return;
+  sb.from('events').delete().eq('id',editingEventId).then(function(res){
+    if(res.error){showToast('Error: '+res.error.message,'tr');return;}
+    closeEventModal(); showToast('Event deleted');
+    loadCalEvents().then(function(){drawCalendar();if(calSelDay)showDayPanel(calSelDay);});
+  });
 }
 
 function setPdexFilter(f, el) {
