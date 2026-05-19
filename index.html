@@ -2661,6 +2661,245 @@ function removeTrade(tradeId) {
   renderTrade(); showToast('Removed from Trade Zone');
 }
 
+// ── EVENTS CALENDAR ──────────────────────────────────────────────────────
+var calYear   = new Date().getFullYear();
+var calMonth  = new Date().getMonth();
+var calSelDay = null;
+var calEvents = [];
+var calRsvps  = [];
+var editingEventId = null;
+var pickedEmoji = '';
+
+function renderEvents() {
+  loadCalEvents().then(drawCalendar);
+}
+
+function loadCalEvents() {
+  if (!sb || !currentUser) { calEvents = []; calRsvps = []; return Promise.resolve(); }
+  var dStart = new Date(calYear, calMonth - 1, 1).toISOString().slice(0,10);
+  var dEnd   = new Date(calYear, calMonth + 2, 1).toISOString().slice(0,10);
+  return sb.from('events').select('*').gte('event_date', dStart).lt('event_date', dEnd)
+    .then(function(res) {
+      if (res.error) { console.error('loadCalEvents:', res.error.message); calEvents = []; return; }
+      calEvents = res.data || [];
+      if (!calEvents.length) { calRsvps = []; return; }
+      var ids = calEvents.map(function(e){ return e.id; });
+      return sb.from('event_rsvps').select('*').in('event_id', ids)
+        .then(function(r){ calRsvps = r.error ? [] : (r.data||[]); });
+    });
+}
+
+function drawCalendar() {
+  var titleEl = document.getElementById('cal-title');
+  var gridEl  = document.getElementById('cal-grid');
+  if (!titleEl || !gridEl) return;
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  titleEl.textContent = MONTHS[calMonth] + ' ' + calYear;
+  gridEl.innerHTML = '';
+  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function(d) {
+    var h = document.createElement('div');
+    h.className = 'cal-day-header'; h.textContent = d; gridEl.appendChild(h);
+  });
+  var firstDay = new Date(calYear, calMonth, 1).getDay();
+  var blanks   = (firstDay === 0) ? 6 : firstDay - 1;
+  var daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  var today = new Date().toISOString().slice(0,10);
+  for (var b = 0; b < blanks; b++) {
+    var bl = document.createElement('div'); bl.className = 'cal-day cal-empty'; gridEl.appendChild(bl);
+  }
+  for (var day = 1; day <= daysInMonth; day++) {
+    var mm = String(calMonth+1).padStart(2,'0');
+    var dd = String(day).padStart(2,'0');
+    var ds = calYear+'-'+mm+'-'+dd;
+    var evs = calEvents.filter(function(e){ return e.event_date===ds; });
+    var cell = document.createElement('div');
+    cell.className = 'cal-day'+(ds===today?' today':'')+(ds===calSelDay?' selected':'');
+    var numEl = document.createElement('div');
+    numEl.className = 'day-num'; numEl.textContent = day; cell.appendChild(numEl);
+    var emojiEv = evs.find(function(e){ return e.emoji; });
+    if (emojiEv) {
+      var ee = document.createElement('div'); ee.className = 'day-emoji'; ee.textContent = emojiEv.emoji; cell.appendChild(ee);
+    }
+    if (evs.length) {
+      var ew = document.createElement('div'); ew.className = 'day-events';
+      evs.slice(0,2).forEach(function(ev){
+        var lbl = document.createElement('div'); lbl.className = 'day-event-label'; lbl.textContent = ev.title; ew.appendChild(lbl);
+      });
+      if (evs.length > 2) {
+        var more = document.createElement('div'); more.className = 'day-event-label'; more.style.color = 'var(--muted)';
+        more.textContent = '+'+(evs.length-2)+' more'; ew.appendChild(more);
+      }
+      cell.appendChild(ew);
+    }
+    (function(dateStr){ cell.addEventListener('click', function(){ selectCalDay(dateStr); }); })(ds);
+    gridEl.appendChild(cell);
+  }
+  if (calSelDay) showDayPanel(calSelDay);
+}
+
+function selectCalDay(ds) { calSelDay = ds; drawCalendar(); showDayPanel(ds); }
+
+function showDayPanel(ds) {
+  var panel = document.getElementById('cal-day-panel');
+  if (!panel) return;
+  var evs = calEvents.filter(function(e){ return e.event_date === ds; });
+  var d   = new Date(ds+'T12:00:00');
+  var lbl = d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  panel.innerHTML = '';
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;';
+  hdr.innerHTML = '<span style="font-weight:600;font-size:14px;">'+lbl+'</span>';
+  var addBtn = document.createElement('button');
+  addBtn.className = 'btn primary'; addBtn.style.cssText = 'font-size:12px;padding:5px 12px;';
+  addBtn.textContent = '+ Add Event';
+  addBtn.addEventListener('click', function(){ openEventModal(ds); });
+  hdr.appendChild(addBtn); panel.appendChild(hdr);
+  if (!evs.length) {
+    var empty = document.createElement('p');
+    empty.style.cssText = 'font-size:13px;color:var(--muted);';
+    empty.textContent = 'No events — click + Add Event to create one.';
+    panel.appendChild(empty); return;
+  }
+  evs.forEach(function(ev) {
+    var card = document.createElement('div');
+    card.className = 'event-card' + (ev.created_by === currentUser.id ? ' editable' : '');
+    var titleRow = document.createElement('div');
+    titleRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;';
+    if (ev.emoji) {
+      var emoSpan = document.createElement('span');
+      emoSpan.style.fontSize = '22px'; emoSpan.textContent = ev.emoji; titleRow.appendChild(emoSpan);
+    }
+    var titleEl = document.createElement('div');
+    titleEl.className = 'ev-title'; titleEl.textContent = ev.title; titleRow.appendChild(titleEl);
+    if (ev.created_by === currentUser.id) {
+      var editBtn = document.createElement('button');
+      editBtn.className = 'btn'; editBtn.style.cssText = 'font-size:10px;padding:2px 8px;margin-left:auto;';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', function(e){ e.stopPropagation(); openEventModal(ds, ev); });
+      titleRow.appendChild(editBtn);
+    }
+    card.appendChild(titleRow);
+    var meta = document.createElement('div'); meta.className = 'ev-meta';
+    var who = ev.created_by_username || ev.created_by_email || 'Someone';
+    var creatorBadge = document.createElement('span');
+    creatorBadge.className = 'ev-creator'; creatorBadge.innerHTML = '👤 ' + who;
+    meta.appendChild(creatorBadge); card.appendChild(meta);
+    if (ev.notes) {
+      var notesEl = document.createElement('div');
+      notesEl.className = 'ev-notes'; notesEl.textContent = ev.notes; card.appendChild(notesEl);
+    }
+    var rsvpRow = document.createElement('div'); rsvpRow.className = 'ev-rsvp-row';
+    var evRsvps   = calRsvps.filter(function(r){ return r.event_id === ev.id; });
+    var myRsvp    = evRsvps.find(function(r){ return r.user_id === currentUser.id; });
+    var goingList = evRsvps.filter(function(r){ return r.status === 'going'; });
+    var goingBtn = document.createElement('button');
+    goingBtn.className = 'ev-rsvp-btn' + (myRsvp && myRsvp.status === 'going' ? ' going' : '');
+    goingBtn.textContent = myRsvp && myRsvp.status === 'going' ? '✓ Going' : 'Going?';
+    goingBtn.addEventListener('click', function(){ toggleRsvp(ev.id, 'going', ds); });
+    rsvpRow.appendChild(goingBtn);
+    var notGoingBtn = document.createElement('button');
+    notGoingBtn.className = 'ev-rsvp-btn' + (myRsvp && myRsvp.status === 'not_going' ? ' not-going' : '');
+    notGoingBtn.textContent = myRsvp && myRsvp.status === 'not_going' ? '✗ Not going' : "Can't go";
+    notGoingBtn.addEventListener('click', function(){ toggleRsvp(ev.id, 'not_going', ds); });
+    rsvpRow.appendChild(notGoingBtn);
+    if (goingList.length) {
+      var avWrap = document.createElement('div'); avWrap.className = 'ev-attendees';
+      goingList.slice(0,5).forEach(function(r) {
+        var av = document.createElement('div');
+        var col2 = FRIEND_COLORS[Math.abs(hashStr(r.user_id||''))%FRIEND_COLORS.length];
+        av.className = 'ev-attendee-av';
+        av.style.cssText = 'background:'+col2+'33;color:'+col2+';';
+        av.title = r.username || r.email || '';
+        av.textContent = (r.username||r.email||'?')[0].toUpperCase();
+        avWrap.appendChild(av);
+      });
+      var countEl = document.createElement('span');
+      countEl.className = 'ev-attendee-count'; countEl.textContent = goingList.length+' going';
+      avWrap.appendChild(countEl); rsvpRow.appendChild(avWrap);
+    }
+    card.appendChild(rsvpRow);
+    panel.appendChild(card);
+  });
+}
+
+function toggleRsvp(eventId, status, ds) {
+  if (!sb || !currentUser) return;
+  var uname  = profileData.username || currentUser.email.split('@')[0];
+  var myRsvp = calRsvps.find(function(r){ return r.event_id === eventId && r.user_id === currentUser.id; });
+  if (myRsvp && myRsvp.status === status) {
+    sb.from('event_rsvps').delete().eq('id', myRsvp.id)
+      .then(function(res){ if(res.error){showToast('Error','tr');return;} loadCalEvents().then(function(){drawCalendar();showDayPanel(ds);}); });
+    return;
+  }
+  if (myRsvp) {
+    sb.from('event_rsvps').update({status:status}).eq('id', myRsvp.id)
+      .then(function(res){ if(res.error){showToast('Error','tr');return;} showToast(status==='going'?'Marked as going ✓':'Marked as not going'); loadCalEvents().then(function(){drawCalendar();showDayPanel(ds);}); });
+  } else {
+    sb.from('event_rsvps').insert({event_id:eventId, user_id:currentUser.id, email:currentUser.email, username:uname, status:status})
+      .then(function(res){ if(res.error){showToast('Error','tr');return;} showToast(status==='going'?'Marked as going ✓':'Marked as not going'); loadCalEvents().then(function(){drawCalendar();showDayPanel(ds);}); });
+  }
+}
+
+function calPrev() { calMonth--; if(calMonth<0){calMonth=11;calYear--;} loadCalEvents().then(drawCalendar); }
+function calNext() { calMonth++; if(calMonth>11){calMonth=0;calYear++;} loadCalEvents().then(drawCalendar); }
+
+function openEventModal(dateStr, ev) {
+  editingEventId = ev ? ev.id : null;
+  pickedEmoji    = ev ? (ev.emoji||'') : '';
+  document.getElementById('event-modal-title').textContent = ev ? 'Edit Event' : 'Add Event';
+  document.getElementById('event-save-btn').textContent    = ev ? 'Save Changes' : 'Add Event';
+  document.getElementById('event-date').value              = dateStr || calSelDay || new Date().toISOString().slice(0,10);
+  document.getElementById('event-title-input').value       = ev ? ev.title : '';
+  document.getElementById('event-emoji').value             = ev ? (ev.emoji||'') : '';
+  document.getElementById('event-notes').value             = ev ? (ev.notes||'') : '';
+  document.getElementById('event-delete-btn').style.display = ev ? 'block' : 'none';
+  document.querySelectorAll('.emoji-opt').forEach(function(b){
+    b.classList.remove('active');
+    if (pickedEmoji && b.textContent === pickedEmoji) b.classList.add('active');
+  });
+  document.getElementById('event-modal').classList.add('open');
+}
+function closeEventModal() {
+  document.getElementById('event-modal').classList.remove('open');
+  editingEventId = null; pickedEmoji = '';
+}
+function pickEmoji(btn, emoji) {
+  pickedEmoji = emoji;
+  document.querySelectorAll('.emoji-opt').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('event-emoji').value = emoji;
+}
+function saveEvent() {
+  var date  = document.getElementById('event-date').value;
+  var title = document.getElementById('event-title-input').value.trim();
+  var emoji = document.getElementById('event-emoji').value.trim() || pickedEmoji || null;
+  var notes = document.getElementById('event-notes').value.trim() || null;
+  if (!date)  { showToast('Please pick a date','tr'); return; }
+  if (!title) { showToast('Please enter an event name','tr'); return; }
+  if (!sb || !currentUser) { showToast('Not connected','tr'); return; }
+  var uname   = profileData.username || currentUser.email.split('@')[0];
+  var payload = { event_date:date, title:title, emoji:emoji, notes:notes,
+    created_by:currentUser.id, created_by_email:currentUser.email, created_by_username:uname };
+  var op = editingEventId
+    ? sb.from('events').update(payload).eq('id', editingEventId)
+    : sb.from('events').insert(payload);
+  op.then(function(res){
+    if (res.error) { showToast('Error: '+res.error.message,'tr'); return; }
+    closeEventModal();
+    showToast(editingEventId ? 'Event updated ✓' : 'Event added 📅');
+    loadCalEvents().then(function(){ drawCalendar(); if(calSelDay) showDayPanel(calSelDay); });
+  });
+}
+function deleteEvent() {
+  if (!editingEventId || !sb) return;
+  sb.from('events').delete().eq('id', editingEventId).then(function(res){
+    if (res.error) { showToast('Error: '+res.error.message,'tr'); return; }
+    closeEventModal(); showToast('Event deleted');
+    loadCalEvents().then(function(){ drawCalendar(); if(calSelDay) showDayPanel(calSelDay); });
+  });
+}
+
+
 function setPdexFilter(f, el) {
   pdexFilter = f;
   document.querySelectorAll('#page-pokedex .chip').forEach(function(c){c.classList.remove('active');});
