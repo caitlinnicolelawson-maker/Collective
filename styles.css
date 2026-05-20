@@ -14,9 +14,9 @@
   --bg3:   #22222d;
   --border:  rgba(255,255,255,0.08);
   --border2: rgba(255,255,255,0.15);
-  --text:  #f0f0f5;
-  --muted: #888896;
-  --accent:  #e8c84a;
+  --text:  #ffffff;
+  --muted: #f7f4c2;
+  --accent:  #ebbe0b;
   --accent2: #f0a030;
   --red:    #e85a6a;
   --green:  #4acf8a;
@@ -372,8 +372,8 @@ body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-hei
 .fw-owned-badge{position:absolute;top:6px;left:6px;background:rgba(74,207,138,0.92);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:700;color:#000;z-index:2;}
 
 .nav-icon {
-  width: 18px;
-  height: 18px;
+  width: 35px;
+  height: 35px;
   object-fit: contain;
 }
 

@@ -1142,6 +1142,11 @@ function viewFriend(f) {
   var initials = (name||'?').slice(0,2).toUpperCase();
     // Get the friend's user ID - could be null if they haven't logged in yet to claim request
   var friendUserId = f._demo ? null : (isMe ? f.to_user_id : f.from_user_id);
+  console.log("CURRENT USER:", currentUser.id);
+console.log("FROM USER:", f.from_user_id);
+console.log("TO USER:", f.to_user_id);
+console.log("IS ME:", isMe);
+console.log("FRIEND USER ID:", friendUserId);
   var friendEmail  = f._demo ? null : (isMe ? f.to_email : f.from_email);
   var wrap = document.getElementById('friend-detail-wrap');
 if (!wrap) return;
@@ -1150,8 +1155,9 @@ if (!wrap) return;
   var cardsPromise;
   if (friendUserId && sb) {
     // Fetch by user_id
-    cardsPromise = sb.from('wishlists').select('card_data').eq('user_id', friendUserId)
-      .then(function(res) {
+cardsPromise = sb.from('wishlists')
+  .select('card_data,user_id,email')
+  .or('user_id.eq.' + friendUserId + ',email.eq.' + friendEmail)      .then(function(res) {
         if (res.error) {
           console.error('viewFriend wishlist error:', res.error.message);
           if (res.error.message.includes('policy') || res.error.code === '42501') {
