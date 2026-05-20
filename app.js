@@ -513,83 +513,95 @@ function renderDash() {
 function renderDashFriendsWishlists() {
   var el = document.getElementById('dash-friends-wishlists');
   if (!el) return;
-  // Demo friends only for dashboard (real friend wishlists loaded async in viewFriend)
-  var allFriends = [];
-  // Real accepted friends
-  (_friendsCache||[]).forEach(function(f) {
+
+  var friends = (_friendsCache || []).map(function(f) {
     var isMe = f.from_user_id === currentUser.id;
-    var name = isMe ? (f.to_username||f.to_email) : (f.from_username||f.from_email);
-    var color = FRIEND_COLORS[Math.abs(hashStr((f.id||'').toString()))%FRIEND_COLORS.length];
-    allFriends.push({ id:f.id, username:name, displayName:name, color:color, cards:[] });
-  });
-  // Collect ALL cards from ALL friends, grouped by card ID
-  // so if two friends want the same card, we show one card with two badges
-  var cardMap = {}; // cardId -> { card, friends: [{name, color, initials, budget}] }
-  allFriends.forEach(function(f) {
-    if (!f.cards || !f.cards.length) return;
-    var color    = f.color || FRIEND_COLORS[Math.abs(hashStr(f.id||''))%FRIEND_COLORS.length];
-    var initials = (f.displayName||f.username||'?').slice(0,2).toUpperCase();
-    f.cards.forEach(function(card) {
-      if (!cardMap[card.id]) cardMap[card.id] = { card: card, friends: [] };
-      cardMap[card.id].friends.push({ name: f.displayName||f.username, color: color, initials: initials, budget: card._budget });
-    });
-  });
-  var entries = Object.values(cardMap);
-  if (!entries.length) {
+    var name  = isMe ? (f.to_username || f.to_email) : (f.from_username || f.from_email);
+    var uid   = isMe ? f.to_user_id : f.from_user_id;
+    var color = FRIEND_COLORS[Math.abs(hashStr((f.id || '').toString())) % FRIEND_COLORS.length];
+    return { id: f.id, username: name, displayName: name, color: color, userId: uid };
+  }).filter(function(f) { return !!f.userId; }); // skip friends who haven't logged in yet
+
+  if (!friends.length) {
     el.innerHTML = '<div class="empty" style="padding:30px 20px"><div class="em">👥</div><p>No friends wishlist items yet</p><small>Add friends to see what they are looking for</small></div>';
     return;
   }
-  el.innerHTML = '';
-  var grid = document.createElement('div');
-  grid.className = 'friends-card-grid';
-  entries.forEach(function(entry) {
-    var card = entry.card;
-    var have = col.some(function(c){ return c.id === card.id; });
-    var p    = getPrice(card);
-    // Outer wrap
-    var wrap = document.createElement('div');
-    wrap.className = 'fw-card-wrap pokemon-card';
-    wrap.style.cursor = 'pointer';
-    wrap.addEventListener('click', function(){ openModal(card.id); });
-    // Card image
-    var img = document.createElement('img');
-    img.src     = (card.images && card.images.small) || '';
-    img.alt     = card.name;
-    img.loading = 'lazy';
-    wrap.appendChild(img);
-    // Owned badge
-    if (have) {
-      var ownBadge = document.createElement('span');
-      ownBadge.className = 'card-badge badge-own';
-      ownBadge.textContent = '✓ Owned';
-      wrap.appendChild(ownBadge);
-    }
-    // Friend badges - stacked in bottom-right
-    var badgesWrap = document.createElement('div');
-    badgesWrap.className = 'fw-friend-badges';
-    entry.friends.forEach(function(fr) {
-      var badge = document.createElement('div');
-      badge.className = 'fw-friend-badge';
-      badge.innerHTML =
-        '<div class="fb-av" style="background:'+fr.color+'33;color:'+fr.color+'">'+fr.initials+'</div>'+
-        '<span class="fb-name">'+fr.name+'</span>'+
-        (fr.budget ? '<span class="fb-budget">£'+fr.budget.toFixed(0)+'</span>' : '');
-      badgesWrap.appendChild(badge);
-    });
-    wrap.appendChild(badgesWrap);
-    // Card info bar
-    var info = document.createElement('div');
-    info.className = 'cb2';
-    info.innerHTML =
-      '<div class="card-name">'+card.name+'</div>'+
-      '<div class="card-set">'+((card.set&&card.set.name)||'')+'</div>'+
-      '<div class="card-price">'+(p ? '£'+p.toFixed(2) : '—')+'</div>';
-    wrap.appendChild(info);
-    grid.appendChild(wrap);
-  });
-  el.appendChild(grid);
-}
 
+  el.innerHTML = '<div class="loading"><span class="spinner"></span>Loading friends\' wishlists…</div>';
+
+  // Fetch wishlists for all friends in parallel
+  var fetches = friends.map(function(f) {
+    return sb.from('wishlists').select('card_data').eq('user_id', f.userId)
+      .then(function(res) {
+        if (res.error) { console.error('dash wishlist fetch error for', f.username, res.error.message); return []; }
+        return (res.data || []).map(function(r) { return r.card_data; });
+      })
+      .then(function(cards) { return { friend: f, cards: cards }; });
+  });
+
+  Promise.all(fetches).then(function(results) {
+    // Group by card ID so if two friends want the same card, it shows once with two badges
+    var cardMap = {};
+    results.forEach(function(r) {
+      var f        = r.friend;
+      var initials = (f.displayName || '?').slice(0, 2).toUpperCase();
+      r.cards.forEach(function(card) {
+        if (!cardMap[card.id]) cardMap[card.id] = { card: card, friends: [] };
+        cardMap[card.id].friends.push({ name: f.displayName, color: f.color, initials: initials, budget: card._budget });
+      });
+    });
+
+    var entries = Object.values(cardMap);
+    if (!entries.length) {
+      el.innerHTML = '<div class="empty" style="padding:30px 20px"><div class="em">👥</div><p>No friends wishlist items yet</p><small>Your friends haven\'t added any cards to their wishlists</small></div>';
+      return;
+    }
+
+    el.innerHTML = '';
+    var grid = document.createElement('div');
+    grid.className = 'friends-card-grid';
+    entries.forEach(function(entry) {
+      var card = entry.card;
+      var have = col.some(function(c) { return c.id === card.id; });
+      var p    = getPrice(card);
+      var wrap = document.createElement('div');
+      wrap.className = 'fw-card-wrap pokemon-card';
+      wrap.style.cursor = 'pointer';
+      wrap.addEventListener('click', function() { openModal(card.id); });
+      var img = document.createElement('img');
+      img.src = (card.images && card.images.small) || '';
+      img.alt = card.name; img.loading = 'lazy';
+      wrap.appendChild(img);
+      if (have) {
+        var ownBadge = document.createElement('span');
+        ownBadge.className = 'card-badge badge-own';
+        ownBadge.textContent = '✓ Owned';
+        wrap.appendChild(ownBadge);
+      }
+      var badgesWrap = document.createElement('div');
+      badgesWrap.className = 'fw-friend-badges';
+      entry.friends.forEach(function(fr) {
+        var badge = document.createElement('div');
+        badge.className = 'fw-friend-badge';
+        badge.innerHTML =
+          '<div class="fb-av" style="background:' + fr.color + '33;color:' + fr.color + '">' + fr.initials + '</div>' +
+          '<span class="fb-name">' + fr.name + '</span>' +
+          (fr.budget ? '<span class="fb-budget">£' + fr.budget.toFixed(0) + '</span>' : '');
+        badgesWrap.appendChild(badge);
+      });
+      wrap.appendChild(badgesWrap);
+      var info = document.createElement('div');
+      info.className = 'cb2';
+      info.innerHTML =
+        '<div class="card-name">' + card.name + '</div>' +
+        '<div class="card-set">' + ((card.set && card.set.name) || '') + '</div>' +
+        '<div class="card-price">' + (p ? '£' + p.toFixed(2) : '—') + '</div>';
+      wrap.appendChild(info);
+      grid.appendChild(wrap);
+    });
+    el.appendChild(grid);
+  });
+}
 // ── SEARCH ───────────────────────────────────────────────
 function setType(t, el) {
   activeType = t;
@@ -1155,9 +1167,8 @@ if (!wrap) return;
   var cardsPromise;
   if (friendUserId && sb) {
     // Fetch by user_id
-cardsPromise = sb.from('wishlists')
-  .select('card_data,user_id,email')
-  .or('user_id.eq.' + friendUserId + ',email.eq.' + friendEmail)      .then(function(res) {
+    cardsPromise = sb.from('wishlists').select('card_data').eq('user_id', friendUserId)
+      .then(function(res) {
         if (res.error) {
           console.error('viewFriend wishlist error:', res.error.message);
           if (res.error.message.includes('policy') || res.error.code === '42501') {
@@ -1167,6 +1178,7 @@ cardsPromise = sb.from('wishlists')
             rlsDiv.innerHTML = '<div style="padding:30px 20px;text-align:center;"><div style="font-size:36px;margin-bottom:12px">🔒</div><p style="font-weight:600;color:var(--red);">Wishlist access blocked</p><p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;">Run this SQL in Supabase to fix:<br><br><code style="background:var(--bg3);padding:6px 10px;border-radius:6px;font-size:11px;display:block;text-align:left;margin-top:6px;">create policy \"Friends can view wishlists\" on wishlists for select using (auth.uid() is not null);</code></p></div>';
             wrap.innerHTML = ''; wrap.appendChild(rlsDiv);
           }
+          console.log("Wishlist raw rows:", res.data);
           return [];
         }
         var cards = (res.data||[]).map(function(r){ return r.card_data; });
