@@ -12,7 +12,20 @@
 </head>
 <body>
 
-
+<div id="import-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Import Collection</h3>
+    <p style="font-size:13px;color:var(--muted)">Paste your exported CSV below, or upload a file. Supported: Collectr, Dex, or any CSV with "Name" and "Set" columns.</p>
+    <textarea id="import-text" rows="8" style="width:100%;font-size:12px;font-family:monospace" placeholder="Paste CSV here..."></textarea>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">Or upload a file:</p>
+    <input type="file" id="import-file" accept=".csv,.json,.txt">
+    <div id="import-status" style="margin-top:8px;font-size:13px"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn primary" onclick="runImport()">Import</button>
+      <button class="btn" onclick="closeImportModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 
 
@@ -50,6 +63,12 @@
     <img src="icons/mycollection.svg" class="nav-icon">
   Collection
 </button>
+
+<button class="nav-item" id="Import" onclick="openImportModal('import')">
+    <img src="icons/mycollection.svg" class="nav-icon">
+  Import
+</button>
+
 
 <button class="nav-item" id="nav-wishlist" onclick="showPage('wishlist')">
       <img src="icons/wishlist.png" class="nav-icon">
@@ -576,5 +595,19 @@
 
 
 <script src="app.js"></script>
+<div id="import-modal" class="modal-overlay">
+  <div class="modal-box">
+    <h3>Import Collection</h3>
+    <p style="font-size:13px;color:var(--muted)">Paste your exported CSV below, or upload a file. Supported: Collectr, Dex, or any CSV with "Name" and "Set" columns.</p>
+    <textarea id="import-text" rows="8" style="width:100%;font-size:12px;font-family:monospace" placeholder="Paste CSV here..."></textarea>
+    <p style="font-size:12px;color:var(--muted);margin-top:8px">Or upload a file:</p>
+    <input type="file" id="import-file" accept=".csv,.json,.txt">
+    <div id="import-status" style="margin-top:8px;font-size:13px"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn primary" onclick="runImport()">Import</button>
+      <button class="btn" onclick="closeImportModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

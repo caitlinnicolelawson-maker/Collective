@@ -2041,4 +2041,140 @@ function renderPokedex() {
       '<div class="pdex-num">#'+String(num).padStart(4,'0')+'</div>'+
       '<div class="pdex-name">'+name+'</div></div>';
   }).join('');
+  // ── IMPORT COLLECTION ────────────────────────────────────
+
+function openImportModal() {
+  document.getElementById('import-text').value = '';
+  document.getElementById('import-status').textContent = '';
+  document.getElementById('import-file').value = '';
+  document.getElementById('import-modal').classList.add('open');
+}
+
+function closeImportModal() {
+  document.getElementById('import-modal').classList.remove('open');
+}
+
+// When a file is uploaded, read it into the textarea
+document.addEventListener('DOMContentLoaded', function() {
+  var fileInput = document.getElementById('import-file');
+  if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        document.getElementById('import-text').value = ev.target.result;
+      };
+      reader.readAsText(file);
+    });
+  }
+});
+
+function runImport() {
+  var text = document.getElementById('import-text').value.trim();
+  if (!text) { document.getElementById('import-status').textContent = '⚠️ Please paste or upload a file first.'; return; }
+
+  var status = document.getElementById('import-status');
+  status.textContent = '🔍 Reading file...';
+
+  var rows = parseImportCSV(text);
+  if (!rows.length) { status.textContent = '⚠️ Could not read any cards from this file. Make sure it has Name and Set columns.'; return; }
+
+  status.textContent = '🔎 Looking up ' + rows.length + ' cards (this may take a minute)...';
+
+  var imported = 0, failed = 0, skipped = 0;
+  var index = 0;
+
+  // Process cards one at a time to avoid rate limits
+  function processNext() {
+    if (index >= rows.length) {
+      status.textContent = '✅ Done! Imported: ' + imported + ', Already owned: ' + skipped + ', Not found: ' + failed;
+      updateStats();
+      return;
+    }
+
+    var row = rows[index++];
+    status.textContent = '🔎 Looking up ' + index + ' / ' + rows.length + ': ' + row.name + '...';
+
+    // Check if already owned
+    var alreadyOwned = col.some(function(c) {
+      return c.name && c.name.toLowerCase() === row.name.toLowerCase();
+    });
+    if (alreadyOwned) { skipped++; setTimeout(processNext, 50); return; }
+
+    // Search the TCG API for the card
+    var query = 'name:"' + row.name + '"';
+    if (row.set) query += ' set.name:"' + row.set + '"';
+
+    tcgGet({ q: query, pageSize: 1 }).then(function(data) {
+      var card = data.data && data.data[0];
+      if (card) {
+        col.push(card);
+        dbAddCol(card);
+        imported++;
+      } else {
+        failed++;
+        console.log('Import: not found:', row.name, row.set);
+      }
+      setTimeout(processNext, 300); // small delay between API calls
+    }).catch(function() {
+      failed++;
+      setTimeout(processNext, 300);
+    });
+  }
+
+  processNext();
+}
+
+function parseImportCSV(text) {
+  var lines = text.split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+  if (!lines.length) return [];
+
+  // Detect if it's JSON
+  if (text.trim()[0] === '[' || text.trim()[0] === '{') {
+    return parseImportJSON(text);
+  }
+
+  // Parse CSV header
+  var header = lines[0].split(',').map(function(h){ return h.trim().toLowerCase().replace(/"/g,''); });
+  var nameCol = header.findIndex(function(h){ return h.includes('name'); });
+  var setCol  = header.findIndex(function(h){ return h.includes('set') || h.includes('expansion'); });
+
+  if (nameCol === -1) { return []; } // can't find a name column
+
+  var results = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols = splitCSVLine(lines[i]);
+    var name = cols[nameCol] ? cols[nameCol].replace(/"/g,'').trim() : '';
+    var set  = setCol !== -1 && cols[setCol] ? cols[setCol].replace(/"/g,'').trim() : '';
+    if (name) results.push({ name: name, set: set });
+  }
+  return results;
+}
+
+function parseImportJSON(text) {
+  try {
+    var arr = JSON.parse(text);
+    if (!Array.isArray(arr)) arr = [arr];
+    return arr.map(function(item) {
+      return {
+        name: item.name || item.cardName || item.card_name || '',
+        set:  item.set  || item.setName  || item.set_name  || ''
+      };
+    }).filter(function(r){ return r.name; });
+  } catch(e) { return []; }
+}
+
+function splitCSVLine(line) {
+  // Handles quoted fields with commas inside them
+  var result = [], current = '', inQuotes = false;
+  for (var i = 0; i < line.length; i++) {
+    if (line[i] === '"') { inQuotes = !inQuotes; }
+    else if (line[i] === ',' && !inQuotes) { result.push(current); current = ''; }
+    else { current += line[i]; }
+  }
+  result.push(current);
+  return result;
+}
+
 }
