@@ -1143,6 +1143,8 @@ function viewFriend(f) {
     // Get the friend's user ID - could be null if they haven't logged in yet to claim request
   var friendUserId = f._demo ? null : (isMe ? f.to_user_id : f.from_user_id);
   var friendEmail  = f._demo ? null : (isMe ? f.to_email : f.from_email);
+  var wrap = document.getElementById('friend-detail-wrap');
+if (!wrap) return;
   wrap.innerHTML = '<div class="loading"><span class="spinner"></span>Loading wishlist...</div>';
 
   var cardsPromise;
