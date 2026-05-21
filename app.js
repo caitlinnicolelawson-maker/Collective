@@ -244,6 +244,30 @@ function showPage(id) {
   if (nav) nav.classList.add('active');
   var renders = { dashboard: renderDash, collection: renderCol, wishlist: renderWish, friends: renderFriends, binder: renderBinder, trade: renderTrade, pokedex: renderPokedex, profile: renderProfile, events: renderEvents };
   if (renders[id]) renders[id]();
+  // Close the sidebar on mobile after navigating
+  closeSidebar();
+}
+
+// Opens/closes the sidebar on mobile (the hamburger ☰ button calls this)
+function toggleSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  if (!sidebar) return;
+  var isOpen = sidebar.classList.contains('mobile-open');
+  if (isOpen) {
+    sidebar.classList.remove('mobile-open');
+    if (overlay) overlay.classList.remove('visible');
+  } else {
+    sidebar.classList.add('mobile-open');
+    if (overlay) overlay.classList.add('visible');
+  }
+}
+
+function closeSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) sidebar.classList.remove('mobile-open');
+  if (overlay) overlay.classList.remove('visible');
 }
 
 // ── TOAST ────────────────────────────────────────────────
