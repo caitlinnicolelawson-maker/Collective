@@ -24,8 +24,14 @@
   --purple: #9b7eff;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:var(--font-body);background-color:#08091c;color:var(--text);min-height:100vh;display:flex;}
-body::before{content:'';position:fixed;inset:0;z-index:-1;background-image:url('icons/pattern3.png');background-size:cover;background-position:center;background-repeat:no-repeat;opacity:0.12;}
+body{font-family:var(--font-body);background:
+  radial-gradient(ellipse 95% 75% at -5%  -5%,  #2a48b8 0%, transparent 62%),
+  radial-gradient(ellipse 85% 70% at 105%  0%,  #b87200 0%, transparent 60%),
+  radial-gradient(ellipse 90% 75% at 110% 110%, #1478c8 0%, transparent 62%),
+  radial-gradient(ellipse 85% 70% at -5%  110%, #b81848 0%, transparent 60%),
+  radial-gradient(ellipse 65% 65% at 50%  50%,  #c03c18 0%, transparent 68%),
+  #08091c;
+color:var(--text);min-height:100vh;display:flex;}
 /* AUTH */
 .auth-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;padding:20px;}
 .auth-screen.visible{display:flex;}
@@ -384,49 +390,29 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background-image:url('
   gap: 10px;
 }
 
-/* SIDEBAR — pattern4 as a very faint texture over a dark base */
+/* SIDEBAR — solid dark navy, matching the gradient theme */
 .sidebar {
-  background-color: #0f1e44;
-  background-image: url('icons/pattern4.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-blend-mode: overlay;
-  opacity: 1;
-  position: relative;
+  background: #0f1e44;
 }
-.sidebar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 22, 55, 0.82);
-  z-index: 0;
-  pointer-events: none;
-}
-.sidebar > * { position: relative; z-index: 1; }
 
-/* NAV TEXT — light gradient cycling through all five logo colours */
+/* NAV TEXT — white, bold when on that page */
 .nav-item {
-  background-image: linear-gradient(135deg, #a8c4ff 0%, #ffd278 28%, #ff8cb4 52%, #86d8ff 76%, #ffb896 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  -webkit-text-fill-color: rgba(255,255,255,0.65);
+  color: rgba(255,255,255,0.65);
+  background-image: none;
 }
-/* Keep the button background on hover, brighten the gradient slightly */
 .nav-item:hover {
   background-color: var(--bg3);
-  background-image: linear-gradient(135deg, #c0d6ff 0%, #ffe090 28%, #ffaacb 52%, #a2e4ff 76%, #ffcaaa 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background-image: none;
+  -webkit-text-fill-color: #ffffff;
+  color: #ffffff;
 }
-/* Active item — warm gold-toned gradient to stand out */
 .nav-item.active {
   background-color: rgba(232,200,74,0.12);
-  background-image: linear-gradient(135deg, #ffe0a0 0%, #ffc060 50%, #ffaa80 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background-image: none;
+  -webkit-text-fill-color: #ffffff;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 /* PAGE HEADINGS — same palette, horizontal sweep (kept for any h2 not replaced) */
@@ -497,7 +483,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background-image:url('
   /* Show the dark overlay when sidebar is open */
   .sidebar-overlay.visible { display: block; }
 
-  /* body::before handles the background — nothing extra needed on mobile */
+  /* gradient scales naturally on mobile — no override needed */
 
   /* Main content takes full width; top padding makes room for hamburger button */
   .main {
