@@ -24,8 +24,8 @@
   --purple: #9b7eff;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:var(--font-body);background:none;color:var(--text);min-height:100vh;display:flex;}
-body::before{content:'';position:fixed;inset:0;z-index:-1;background-image:url('icons/pattern3.png');background-size:cover;background-position:center;background-repeat:no-repeat;}
+body{font-family:var(--font-body);background-color:#08091c;color:var(--text);min-height:100vh;display:flex;}
+body::before{content:'';position:fixed;inset:0;z-index:-1;background-image:url('icons/pattern3.png');background-size:cover;background-position:center;background-repeat:no-repeat;opacity:0.12;}
 /* AUTH */
 .auth-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;padding:20px;}
 .auth-screen.visible{display:flex;}
@@ -384,13 +384,26 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;background-image:url('
   gap: 10px;
 }
 
-/* SIDEBAR — pattern4 background */
+/* SIDEBAR — pattern4 as a very faint texture over a dark base */
 .sidebar {
+  background-color: #0f1e44;
   background-image: url('icons/pattern4.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  background-blend-mode: overlay;
+  opacity: 1;
+  position: relative;
 }
+.sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 22, 55, 0.82);
+  z-index: 0;
+  pointer-events: none;
+}
+.sidebar > * { position: relative; z-index: 1; }
 
 /* NAV TEXT — light gradient cycling through all five logo colours */
 .nav-item {
