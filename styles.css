@@ -24,14 +24,7 @@
   --purple: #9b7eff;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:var(--font-body);background:
-  radial-gradient(ellipse 95% 75% at -5%  -5%,  #2a48b8 0%, transparent 62%),
-  radial-gradient(ellipse 85% 70% at 105%  0%,  #b87200 0%, transparent 60%),
-  radial-gradient(ellipse 90% 75% at 110% 110%, #1478c8 0%, transparent 62%),
-  radial-gradient(ellipse 85% 70% at -5%  110%, #b81848 0%, transparent 60%),
-  radial-gradient(ellipse 65% 65% at 50%  50%,  #c03c18 0%, transparent 68%),
-  #08091c;
-background-attachment:fixed;color:var(--text);min-height:100vh;display:flex;}
+body{font-family:var(--font-body);background:url('icons/pattern3.png') center center / cover no-repeat fixed;color:var(--text);min-height:100vh;display:flex;}
 /* AUTH */
 .auth-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;padding:20px;}
 .auth-screen.visible{display:flex;}
@@ -390,9 +383,9 @@ background-attachment:fixed;color:var(--text);min-height:100vh;display:flex;}
   gap: 10px;
 }
 
-/* SIDEBAR — blue tint to sit with the gradient theme */
+/* SIDEBAR — pattern4 background */
 .sidebar {
-  background: #0f1e44;
+  background: url('icons/pattern4.png') center center / cover no-repeat;
 }
 
 /* NAV TEXT — light gradient cycling through all five logo colours */
@@ -487,8 +480,10 @@ background-attachment:fixed;color:var(--text);min-height:100vh;display:flex;}
   /* Show the dark overlay when sidebar is open */
   .sidebar-overlay.visible { display: block; }
 
-  /* Gradient can't use fixed on mobile (Safari bug), fall back to scroll */
+  /* Fixed backgrounds glitch on iOS Safari — switch to scroll on mobile */
   body { background-attachment: scroll; }
+  /* Sidebar pattern tiles on mobile rather than stretching */
+  .sidebar { background-size: auto; background-repeat: repeat; }
 
   /* Main content takes full width; top padding makes room for hamburger button */
   .main {
