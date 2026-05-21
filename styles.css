@@ -230,11 +230,11 @@ color:var(--text);min-height:100vh;display:flex;}
 .pdex-controls input:focus{border-color:var(--accent);}
 .pdex-progress{font-size:13px;color:var(--muted);white-space:nowrap;}
 .pdex-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px;}
-.pdex-mon{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid transparent;user-select:none;}
+.pdex-mon{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:10px;cursor:pointer;transition:all .2s;border:1px solid transparent;user-select:none;background:rgba(255,255,255,0.04);}
 .pdex-mon:hover{border-color:var(--border2);background:var(--bg2);}
 .pdex-mon.caught{background:var(--bg2);border-color:var(--accent);}
 .pdex-mon .sprite{width:56px;height:56px;image-rendering:pixelated;}
-.pdex-mon:not(.caught) .sprite{filter:grayscale(1) brightness(0.4);}
+.pdex-mon:not(.caught) .sprite{filter:grayscale(1);opacity:0.35;}
 .pdex-mon .pdex-num{font-size:9px;color:var(--muted);}
 .pdex-mon .pdex-name{font-size:10px;font-weight:600;text-align:center;line-height:1.2;}
 .pdex-mon.caught .pdex-name{color:var(--accent);}
