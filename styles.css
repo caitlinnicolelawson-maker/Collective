@@ -24,7 +24,8 @@
   --purple: #9b7eff;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:var(--font-body);background:url('icons/pattern3.png') center center / cover no-repeat;color:var(--text);min-height:100vh;display:flex;}
+body{font-family:var(--font-body);background:none;color:var(--text);min-height:100vh;display:flex;}
+body::before{content:'';position:fixed;inset:0;z-index:-1;background-image:url('icons/pattern3.png');background-size:cover;background-position:center;background-repeat:no-repeat;}
 /* AUTH */
 .auth-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;padding:20px;}
 .auth-screen.visible{display:flex;}
@@ -385,7 +386,10 @@ body{font-family:var(--font-body);background:url('icons/pattern3.png') center ce
 
 /* SIDEBAR — pattern4 background */
 .sidebar {
-  background: url('icons/pattern4.png') center center / cover no-repeat;
+  background-image: url('icons/pattern4.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* NAV TEXT — light gradient cycling through all five logo colours */
@@ -423,7 +427,7 @@ body{font-family:var(--font-body);background:url('icons/pattern3.png') center ce
 
 /* PAGE HEADING IMAGES — replaces the h2 text on each page */
 .page-heading-img {
-  height: 80px;
+  height: 52px;
   width: auto;
   display: block;
   object-fit: contain;
@@ -480,8 +484,7 @@ body{font-family:var(--font-body);background:url('icons/pattern3.png') center ce
   /* Show the dark overlay when sidebar is open */
   .sidebar-overlay.visible { display: block; }
 
-  /* On mobile, keep the pattern visible by covering the full scrollable height */
-  body { background-size: cover; background-attachment: scroll; }
+  /* body::before handles the background — nothing extra needed on mobile */
 
   /* Main content takes full width; top padding makes room for hamburger button */
   .main {
