@@ -25,11 +25,12 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:var(--font-body);background:
-  radial-gradient(ellipse 110% 55% at 72% -5%, #7a3580 0%, transparent 55%),
-  radial-gradient(ellipse 80% 60% at 5%  45%, #0d1848 0%, transparent 58%),
-  radial-gradient(ellipse 75% 70% at 55% 58%, #0a98ac 0%, transparent 65%),
-  radial-gradient(ellipse 90% 58% at 28% 108%, #25a07a 0%, transparent 55%),
-  #122558;
+  radial-gradient(ellipse 85% 65% at -5%  -5%,  #0d1640 0%, transparent 55%),
+  radial-gradient(ellipse 75% 60% at 105%  0%,  #4a2e00 0%, transparent 52%),
+  radial-gradient(ellipse 80% 65% at 108% 108%, #0a2a46 0%, transparent 54%),
+  radial-gradient(ellipse 75% 60% at -5%  108%, #480818 0%, transparent 52%),
+  radial-gradient(ellipse 55% 55% at 50%  50%,  #3a0d1a 0%, transparent 65%),
+  #04060e;
 background-attachment:fixed;color:var(--text);min-height:100vh;display:flex;}
 /* AUTH */
 .auth-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;padding:20px;}
