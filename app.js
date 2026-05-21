@@ -2041,6 +2041,7 @@ function renderPokedex() {
       '<div class="pdex-num">#'+String(num).padStart(4,'0')+'</div>'+
       '<div class="pdex-name">'+name+'</div></div>';
   }).join('');
+}
   // ── IMPORT COLLECTION ────────────────────────────────────
 
 function openImportModal() {
@@ -2177,4 +2178,3 @@ function splitCSVLine(line) {
   return result;
 }
 
-}
