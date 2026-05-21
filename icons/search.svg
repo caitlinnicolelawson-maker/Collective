@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Lens fill -->
+  <circle cx="33" cy="33" r="20" fill="#5aaced" opacity="0.25"/>
+  <!-- Lens ring -->
+  <circle cx="33" cy="33" r="20" fill="none" stroke="#5aaced" stroke-width="6" stroke-linecap="round"/>
+  <!-- Handle -->
+  <line x1="48" y1="48" x2="64" y2="64" stroke="#ebbe0b" stroke-width="7" stroke-linecap="round"/>
+  <!-- Inner sparkle dot -->
+  <circle cx="27" cy="26" r="5" fill="white" opacity="0.35"/>
+</svg>
