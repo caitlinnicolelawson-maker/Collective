@@ -135,7 +135,7 @@
 <main class="main">
   <!-- DASHBOARD -->
   <div class="page active" id="page-dashboard">
-    <div class="topbar"><h2>Dashboard</h2><button class="btn primary" onclick="showPage('search')">+ Add Cards</button></div>
+    <div class="topbar"><img src="icons/dashboard1.svg"  class="page-heading-img" alt="Dashboard"><button class="btn primary" onclick="showPage('search')">+ Add Cards</button></div>
     <div class="stats-grid">
       <div class="stat-card ca"><div class="label">Cards Owned</div><div class="value" id="st-owned">0</div><div class="sub">in your collection</div></div>
       <div class="stat-card cr"><div class="label">Wishlist</div><div class="value" id="st-wish">0</div><div class="sub">cards wanted</div></div>
@@ -157,7 +157,7 @@
 
   <!-- SEARCH -->
   <div class="page" id="page-search">
-    <div class="topbar"><h2>Search Cards</h2></div>
+    <div class="topbar"><img src="icons/FINDCARDS1.svg"  class="page-heading-img" alt="Find Cards"></div>
     <div class="search-bar-row">
       <input type="text" id="search-input" placeholder="Pokémon name… Charizard, Pikachu, Umbreon">
       <input type="text" id="artist-input" placeholder="Artist (optional)" style="width:180px">
@@ -186,7 +186,7 @@
   <!-- COLLECTION -->
   <div class="page" id="page-collection">
     <div class="topbar">
-      <h2>My Collection</h2>
+      <img src="icons/COLLECTION1.svg" class="page-heading-img" alt="My Collection">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input class="new-folder-input" id="new-folder-name" type="text" placeholder="New folder name…">
         <button class="btn primary" onclick="createFolder()">+ Folder</button>
@@ -210,13 +210,13 @@
 
   <!-- WISHLIST -->
   <div class="page" id="page-wishlist">
-    <div class="topbar"><h2>My Wishlist</h2><button class="btn primary" onclick="showPage('search')">+ Find Cards</button></div>
+    <div class="topbar"><img src="icons/WISHLIT.svg"     class="page-heading-img" alt="My Wishlist"><button class="btn primary" onclick="showPage('search')">+ Find Cards</button></div>
     <div id="wish-content"><div class="empty"><div class="em">⭐</div><p>Your wishlist is empty</p></div></div>
   </div>
 
   <!-- FRIENDS -->
   <div class="page" id="page-friends">
-    <div class="topbar"><h2>Friends</h2></div>
+    <div class="topbar"><img src="icons/friends.svg"     class="page-heading-img" alt="Friends"></div>
     <div class="friends-layout">
       <div>
         <!-- Add friend -->
@@ -254,7 +254,7 @@
   <!-- EVENTS -->
   <div class="page" id="page-events">
     <div class="topbar">
-      <h2>Events</h2>
+      <img src="icons/Events1.svg"     class="page-heading-img" alt="Events">
       <button class="btn primary" onclick="openEventModal()">+ Add Event</button>
     </div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:20px">A shared calendar — you and your friends can all add events. Add an emoji to make a day stand out!</p>
@@ -288,7 +288,7 @@
 
   <!-- PROFILE -->
   <div class="page" id="page-profile">
-    <div class="topbar"><h2>My Profile</h2><button class="btn primary" id="profile-save-btn" onclick="saveProfile()">Save Changes</button></div>
+    <div class="topbar"><img src="icons/profile1.svg"    class="page-heading-img" alt="My Profile"><button class="btn primary" id="profile-save-btn" onclick="saveProfile()">Save Changes</button></div>
     <div class="profile-card">
       <div class="profile-avatar-wrap">
         <div class="profile-avatar" id="profile-avatar-display" onclick="document.getElementById('avatar-upload').click()">?</div>
@@ -312,7 +312,7 @@
   <!-- BINDER -->
   <div class="page" id="page-binder">
     <div id="binder-overview-view">
-      <div class="topbar"><h2>Binder Designer</h2><button class="btn primary" onclick="addBinderPage()">+ New Page</button></div>
+      <div class="topbar"><img src="icons/binder1.svg"     class="page-heading-img" alt="Binder"><button class="btn primary" onclick="addBinderPage()">+ New Page</button></div>
       <p style="color:var(--muted);font-size:14px;margin-bottom:24px">Click a page to edit it.</p>
       <div class="binder-overview" id="binder-overview"></div>
     </div>
@@ -426,7 +426,7 @@
 
   <!-- TRADE ZONE -->
   <div class="page" id="page-trade">
-    <div class="topbar"><h2>Trade Zone</h2><button class="btn primary" onclick="openTradeModal()">+ List a Card</button></div>
+    <div class="topbar"><img src="icons/trade1.svg"      class="page-heading-img" alt="Trade Zone"><button class="btn primary" onclick="openTradeModal()">+ List a Card</button></div>
     <div class="trade-tabs">
       <button class="trade-tab active" id="trade-tab-mine" onclick="setTradeTab('mine',this)">My Listings</button>
       <button class="trade-tab" id="trade-tab-all" onclick="setTradeTab('all',this)">All Friends</button>
@@ -439,7 +439,7 @@
 
   <!-- POKÉDEX -->
   <div class="page" id="page-pokedex">
-    <div class="topbar"><h2>Pokédex</h2></div>
+    <div class="topbar"><img src="icons/pokedex1.svg"    class="page-heading-img" alt="Pokédex"></div>
     <div class="pdex-controls">
       <input type="text" id="pdex-search" placeholder="Search Pokémon name or number…" oninput="renderPokedex()">
       <button class="chip active" onclick="setPdexFilter('all',this)">All</button>
